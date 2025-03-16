@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Setter
 @Getter
-public class MessageDto {
-  private String sender;
-  private String content;
+public class ChannelDTO {
+  private String name;
+  private String vanityId;
 }

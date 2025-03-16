@@ -10,8 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Getter
 @Setter
 public class Message {
-  @Id
-  private String id;
+  @Id private String id;
   private String sender;
   private String channel;
   private String content;

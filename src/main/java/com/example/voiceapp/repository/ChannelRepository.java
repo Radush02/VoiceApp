@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ChannelRepository extends MongoRepository<Channel, String> {
-    boolean existsByName(String name);
-    boolean existsByVanityId(String vanityId);
-}
+  boolean existsByName(String name);
 
+  boolean existsByVanityId(String vanityId);
+}

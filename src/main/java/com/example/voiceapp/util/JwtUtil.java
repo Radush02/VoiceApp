@@ -3,7 +3,6 @@ package com.example.voiceapp.util;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-
 import java.security.Key;
 import java.util.Date;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +21,7 @@ public class JwtUtil {
         .signWith(Keys.hmacShaKeyFor(SECRET_KEY.getBytes()), SignatureAlgorithm.HS256)
         .compact();
   }
+
   private Key getSigningKey() {
     return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
   }

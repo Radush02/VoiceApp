@@ -1,6 +1,11 @@
 package com.example.voiceapp.dtos;
 
-public class LoginDTO  {
-    private String username;
-    private String password;
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
+public class LoginDTO {
+  private String username;
+  private String password;
 }

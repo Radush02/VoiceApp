@@ -9,9 +9,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Getter
 @Setter
 public class Channel {
-    @Id
-    private String id;
-    private String name;
-    private String vanityId;
-    private String createdBy;
+  @Id private String id;
+  private String name;
+  private String vanityId;
+  private String createdBy;
 }
