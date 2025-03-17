@@ -8,7 +8,9 @@ import com.example.voiceapp.service.MessageService.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,12 +24,11 @@ public class ChatController {
   @Autowired private SimpMessagingTemplate messagingTemplate;
 
   @MessageMapping("/sendMessage/{channel}")
-  @ResponseStatus(HttpStatus.OK)
-  public ResponseEntity<Boolean> sendMessage(@PathVariable String channel, Message message) {
+  public void sendMessage(@DestinationVariable String channel, @Payload Message message) {
     try {
       messageService.saveMessage(message);
+      System.out.println("Broadcasting message to /channel/" + channel + ": " + message.getContent());
       messagingTemplate.convertAndSend("/channel/" + channel, message);
-      return new ResponseEntity<>(true, HttpStatus.OK);
     } catch (Exception e) {
       throw e;
     }

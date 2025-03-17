@@ -18,7 +18,6 @@ public class MessageService implements MessageServiceImpl {
     if (!channelRepository.existsByVanityId(message.getChannel())) {
       throw new NonExistentException("Channel doesn't exist!");
     }
-
     return messageRepository.save(message);
   }
 }

@@ -18,7 +18,7 @@ export class ChatComponent implements OnInit {
   constructor(private websocketService: WebsocketService) {}
 
   ngOnInit() {
-    this.websocketService.subscribeToChannel(this.channel, (message: any) => {
+    this.websocketService.subscribeToChannel(`/channel/${this.channel}`, (message: any) => {
       if (message) {
         this.messages.push(message);
       }

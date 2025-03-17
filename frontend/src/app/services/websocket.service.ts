@@ -42,7 +42,9 @@ export class WebsocketService {
   public subscribeToChannel(channel: string, callback: (message: any) => void) {
     if (this.stompClient && this.stompClient.connected) {
       this.stompClient.subscribe(channel, (message) => {
-        callback(JSON.parse(message.body));
+        const parsedMessage = JSON.parse(message.body);
+        this.messageSubject.next(parsedMessage);
+        callback(parsedMessage);
       });
     } else {
       console.warn('WebSocket not connected yet. Queuing subscription for:', channel);
@@ -52,7 +54,10 @@ export class WebsocketService {
 
   public sendMessage(channel: string, message: any) {
     if (this.stompClient && this.stompClient.connected) {
-      this.stompClient.publish({ destination: channel, body: JSON.stringify(message) });
+      this.stompClient.publish({
+        destination: `/app/sendMessage/${channel}`,
+        body: JSON.stringify(message)
+      });
     } else {
       console.warn('WebSocket not connected. Message not sent:', message);
     }
