@@ -1,0 +1,12 @@
+<form [formGroup]="serverForm" (ngSubmit)="onSubmit()">
+  <div>
+    <label for="serverName">Server Name:</label>
+    <input id="serverName" formControlName="serverName" type="text" />
+  </div>
+
+  <div>
+    <label for="vanityId">Vanity ID:</label>
+    <input id="vanityId" formControlName="vanityId" type="text" />
+  </div>
+
+  <button type="submit" [disabled]="serverForm.invalid">Submit</button>

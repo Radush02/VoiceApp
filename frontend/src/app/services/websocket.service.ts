@@ -9,32 +9,56 @@ import { BehaviorSubject } from 'rxjs';
 export class WebsocketService {
   private stompClient!: Client;
   private messageSubject = new BehaviorSubject<any>(null);
+  private isConnected = false; 
+  private pendingSubscriptions: string[] = []; 
 
   constructor() {
     this.connect();
   }
 
   private connect() {
-    const socket = new SockJS('http://localhost:8080/ws');
-    this.stompClient = Stomp.over(socket);
+    this.stompClient = new Client({
+      brokerURL: 'ws://localhost:8080/ws',
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000
+    });
+
+    this.stompClient.onConnect = () => {
+      console.log('Connected to WebSocket');
+      this.isConnected = true;
+      this.pendingSubscriptions.forEach(channel => this.subscribeToChannel(channel, () => {}));
+      this.pendingSubscriptions = [];
+    };
+
+    this.stompClient.onWebSocketError = (error) => {
+      console.error('WebSocket Error:', error);
+      this.isConnected = false;
+    };
 
     this.stompClient.activate();
-    this.stompClient.onConnect = () => {
-      console.log("Connected to WebSocket");
-    };
   }
 
-  subscribeToChannel(channel: string) {
-    this.stompClient.subscribe(`/channel/${channel}`, (message: { body: string; }) => {
-      this.messageSubject.next(JSON.parse(message.body));
-    });
+  public subscribeToChannel(channel: string, callback: (message: any) => void) {
+    if (this.stompClient && this.stompClient.connected) {
+      this.stompClient.subscribe(channel, (message) => {
+        callback(JSON.parse(message.body));
+      });
+    } else {
+      console.warn('WebSocket not connected yet. Queuing subscription for:', channel);
+      this.pendingSubscriptions.push(channel);
+    }
   }
 
-  sendMessage(channel: string, message: any) {
-    this.stompClient.publish({ destination: `/app/sendMessage/${channel}`, body: JSON.stringify(message) });
+  public sendMessage(channel: string, message: any) {
+    if (this.stompClient && this.stompClient.connected) {
+      this.stompClient.publish({ destination: channel, body: JSON.stringify(message) });
+    } else {
+      console.warn('WebSocket not connected. Message not sent:', message);
+    }
   }
 
-  getMessages() {
+  public getMessages() {
     return this.messageSubject.asObservable();
   }
 }
