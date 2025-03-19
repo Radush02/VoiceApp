@@ -12,19 +12,14 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/channel")
-
 public class ChannelController {
   @Autowired private ChannelService channelService;
 
   @PostMapping("/create")
   @ResponseStatus(HttpStatus.CREATED)
   public ResponseEntity<Channel> createChannel(@RequestBody ChannelDTO channelDTO) {
-    try {
-      Channel ch = channelService.createChannel(channelDTO);
-      return new ResponseEntity<>(ch, HttpStatus.CREATED);
-    } catch (Exception e) {
-      throw e;
-    }
+    Channel ch = channelService.createChannel(channelDTO);
+    return new ResponseEntity<>(ch, HttpStatus.CREATED);
   }
 
   @ExceptionHandler(AlreadyExistsException.class)

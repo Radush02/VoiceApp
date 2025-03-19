@@ -4,26 +4,24 @@ import com.example.voiceapp.collection.Message;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.service.MessageService.MessageService;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.handler.annotation.DestinationVariable;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-public class ChatController {
+@RequestMapping("/api/messages")
+public class MessageController {
+
   @Autowired private MessageService messageService;
 
-  @Autowired private SimpMessagingTemplate messagingTemplate;
-
-  @MessageMapping("/sendMessage/{channel}")
-  public void sendMessage(@DestinationVariable String channel, @Payload Message message) {
-    messageService.saveMessage(message);
-    System.out.println("Broadcasting message to /channel/" + channel + ": " + message.getContent());
-    messagingTemplate.convertAndSend("/channel/" + channel, message);
+  @GetMapping("/{channel}")
+  public ResponseEntity<List<Message>> getMessages(
+      @PathVariable String channel,
+      @RequestParam(required = false, defaultValue = "20") Integer limit) {
+    List<Message> messages = messageService.fetchMessagesByChannel(channel, limit);
+    return new ResponseEntity<>(messages, HttpStatus.OK);
   }
 
   @ExceptionHandler(AlreadyExistsException.class)
