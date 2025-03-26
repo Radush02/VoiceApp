@@ -38,7 +38,7 @@ public class AuthService implements AuthServiceImpl {
     return Map.of("message", "User registered successfully");
   }
 
-  public Map<String, String> authenticateUser(LoginDTO loginDTO) {
+  public String authenticateUser(LoginDTO loginDTO) {
     User user =
         userRepository
             .findByUsername(loginDTO.getUsername())
@@ -47,7 +47,6 @@ public class AuthService implements AuthServiceImpl {
     if (!passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
       throw new NonExistentException("Invalid credentials");
     }
-    String token = jwtUtil.generateToken(user.getUsername());
-    return Map.of("token", token);
+    return jwtUtil.generateToken(user.getUsername());
   }
 }

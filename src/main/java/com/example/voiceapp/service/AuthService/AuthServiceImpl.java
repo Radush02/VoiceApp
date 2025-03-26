@@ -8,5 +8,5 @@ public interface AuthServiceImpl {
 
   Map<String, String> registerUser(RegisterDTO registerDTO);
 
-  Map<String, String> authenticateUser(LoginDTO loginDTO);
+  String authenticateUser(LoginDTO loginDTO);
 }
