@@ -21,13 +21,13 @@ public class JwtUtil {
   public String generateToken(String username) {
     Instant now = Instant.now();
     return Jwts.builder()
-        .claim("sub", username)
-        .claim("iat", Date.from(now))
-        .claim("exp", Date.from(now.plus(1, ChronoUnit.HOURS)))
-        .signWith(
-            Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)),
-            SignatureAlgorithm.HS256)
-        .compact();
+            .claim("sub", username)
+            .issuedAt(Date.from(now))
+            .expiration(Date.from(now.plus(1, ChronoUnit.HOURS)))
+            .signWith(
+                    Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)),
+                    SignatureAlgorithm.HS256)
+            .compact();
   }
 
   public String extractUsername(String token) {

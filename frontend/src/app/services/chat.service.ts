@@ -12,6 +12,6 @@ export class ChatService {
   constructor(private http:HttpClient) { }
 
   fetchMessages(channel: string, limit: number=50): Observable<any> {
-    return this.http.get(`${this.apiLink}/${channel}`);
+    return this.http.get(`${this.apiLink}/${channel}`,{withCredentials:true});
   }
 }

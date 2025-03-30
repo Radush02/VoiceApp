@@ -5,7 +5,7 @@ import { Observable,tap,map } from 'rxjs';
 @Injectable({
   providedIn: 'root'
 })
-export class AuthGuard implements CanActivate {
+export class LoggedGuard implements CanActivate {
   constructor(private authService: AuthenticationService, private router: Router) { }
 
   canActivate(): Observable<boolean> {
@@ -13,9 +13,9 @@ export class AuthGuard implements CanActivate {
       tap(loggedIn => {
         if (!loggedIn) {
           console.log('You are not logged in!');
-          this.router.navigate(['/login']);
         } else {
           console.log('You are already logged in!');
+          this.router.navigate(['/chat']);
         }
       }),
       map(loggedIn => loggedIn)

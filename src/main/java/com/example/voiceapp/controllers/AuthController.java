@@ -7,6 +7,7 @@ import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.service.AuthService.AuthService;
 import java.util.Map;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +37,7 @@ public class AuthController {
 
     ResponseCookie jwtCookie = ResponseCookie.from("jwt", token)
             .httpOnly(true)
-            .secure(true)
+            .secure(false)
             .path("/")
             .maxAge(60 * 60 * 24)
             .sameSite("Strict")
@@ -51,7 +52,7 @@ public class AuthController {
   public ResponseEntity<?> logout(HttpServletResponse response) {
     ResponseCookie cookie = ResponseCookie.from("jwt", "")
             .httpOnly(true)
-            .secure(true)
+            .secure(false)
             .path("/")
             .maxAge(0)
             .build();
@@ -63,7 +64,8 @@ public class AuthController {
 
   @PostMapping("/check")
   public ResponseEntity<?> isAuthenticated(HttpServletRequest response) {
-      return ResponseEntity.ok().body("Authenticated");
+    System.out.println(response);
+      return ResponseEntity.ok(Map.of("isAuthenticated", true));
   }
   @ExceptionHandler(AlreadyExistsException.class)
   public ResponseEntity<String> handleAlreadyExistsException(AlreadyExistsException e) {
@@ -79,4 +81,5 @@ public class AuthController {
   public ResponseEntity<String> handleRuntimeException(RuntimeException e) {
     return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
   }
+
 }
