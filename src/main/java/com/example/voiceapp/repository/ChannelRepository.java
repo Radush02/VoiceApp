@@ -9,4 +9,7 @@ public interface ChannelRepository extends MongoRepository<Channel, String> {
   boolean existsByName(String name);
 
   boolean existsByVanityId(String vanityId);
+
+  Channel findByName(String name);
+  Channel findByVanityId(String vanityId);
 }

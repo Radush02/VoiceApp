@@ -11,14 +11,12 @@ export class LoggedGuard implements CanActivate {
   canActivate(): Observable<boolean> {
     return this.authService.loggedIn().pipe(
       tap(loggedIn => {
-        if (!loggedIn) {
-          console.log('You are not logged in!');
-        } else {
+        if (loggedIn) {
           console.log('You are already logged in!');
           this.router.navigate(['/chat']);
         }
       }),
-      map(loggedIn => loggedIn)
+      map(loggedIn => !loggedIn)
     );
   }
 }

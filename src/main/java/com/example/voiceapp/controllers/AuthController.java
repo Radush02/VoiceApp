@@ -6,6 +6,8 @@ import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.service.AuthService.AuthService;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,10 +34,10 @@ public class AuthController {
   }
 
   @PostMapping("/login")
-  public ResponseEntity<?> login(@RequestBody LoginDTO loginDTO, HttpServletResponse response) {
-    String token = authService.authenticateUser(loginDTO);
+  public ResponseEntity<?> login(@RequestBody LoginDTO loginDTO, HttpServletResponse response) throws ExecutionException, InterruptedException {
+    CompletableFuture<String> token = authService.authenticateUser(loginDTO);
 
-    ResponseCookie jwtCookie = ResponseCookie.from("jwt", token)
+    ResponseCookie jwtCookie = ResponseCookie.from("jwt", token.get())
             .httpOnly(true)
             .secure(false)
             .path("/")
@@ -45,7 +47,7 @@ public class AuthController {
 
     response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
 
-    return ResponseEntity.ok("Login successful");
+    return ResponseEntity.ok(Map.of("response","Login successful"));
   }
 
   @PostMapping("/logout")
@@ -59,7 +61,7 @@ public class AuthController {
 
     response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
-    return ResponseEntity.ok("Logged out successfully");
+    return ResponseEntity.ok(Map.of("response","Logged out successful"));
   }
 
   @PostMapping("/check")
@@ -67,19 +69,24 @@ public class AuthController {
     System.out.println(response);
       return ResponseEntity.ok(Map.of("isAuthenticated", true));
   }
+
+  @GetMapping("/user/me")
+  public ResponseEntity<?> getCurrentUser() {
+    return ResponseEntity.ok(Map.of("username",authService.extractUsername()));
+  }
   @ExceptionHandler(AlreadyExistsException.class)
-  public ResponseEntity<String> handleAlreadyExistsException(AlreadyExistsException e) {
-    return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+  public ResponseEntity<Map<String,String>> handleAlreadyExistsException(AlreadyExistsException e) {
+    return new ResponseEntity<>(Map.of("Error",e.getMessage()), HttpStatus.CONFLICT);
   }
 
   @ExceptionHandler(NonExistentException.class)
-  public ResponseEntity<String> handleNonExistentException(NonExistentException e) {
-    return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+  public ResponseEntity<Map<String,String>> handleNonExistentException(NonExistentException e) {
+    return new ResponseEntity<>(Map.of("Error",e.getMessage()), HttpStatus.NOT_FOUND);
   }
 
   @ExceptionHandler(RuntimeException.class)
-  public ResponseEntity<String> handleRuntimeException(RuntimeException e) {
-    return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+  public ResponseEntity<Map<String,String>> handleRuntimeException(RuntimeException e) {
+    return new ResponseEntity<>(Map.of("Error",e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
   }
 
 }

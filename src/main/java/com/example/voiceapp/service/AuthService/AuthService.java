@@ -9,7 +9,10 @@ import com.example.voiceapp.repository.UserRepository;
 import com.example.voiceapp.util.JwtUtil;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +23,7 @@ public class AuthService implements AuthServiceImpl {
   private final JwtUtil jwtUtil;
   private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-  public Map<String, String> registerUser(RegisterDTO registerDTO) {
+  public CompletableFuture<Map<String, String>> registerUser(RegisterDTO registerDTO) {
     if (userRepository.existsByEmail(registerDTO.getEmail())) {
       throw new AlreadyExistsException("There's already a user with this email.");
     }
@@ -35,10 +38,10 @@ public class AuthService implements AuthServiceImpl {
             registerDTO.getEmail(),
             new HashSet<>());
     userRepository.save(newUser);
-    return Map.of("message", "User registered successfully");
+    return CompletableFuture.completedFuture(Map.of("message", "User registered successfully"));
   }
 
-  public String authenticateUser(LoginDTO loginDTO) {
+  public CompletableFuture<String> authenticateUser(LoginDTO loginDTO) {
     User user =
         userRepository
             .findByUsername(loginDTO.getUsername())
@@ -47,6 +50,10 @@ public class AuthService implements AuthServiceImpl {
     if (!passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
       throw new NonExistentException("Invalid credentials");
     }
-    return jwtUtil.generateToken(user.getUsername());
+    return CompletableFuture.completedFuture(jwtUtil.generateToken(user.getUsername()));
+  }
+
+  public String extractUsername() {
+    return SecurityContextHolder.getContext().getAuthentication().getName();
   }
 }

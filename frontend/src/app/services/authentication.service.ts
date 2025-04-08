@@ -30,4 +30,11 @@ export class AuthenticationService {
       catchError(() => of(false)) 
     );
   }
+  getUsername(): Observable<string> {
+    return this.http.get<{username:string}>(`${this.apiLink}/user/me`, { withCredentials: true }).pipe(
+      tap(response => console.log('Username:', response.username)),
+      map(response => response.username),
+      catchError(() => of('')) 
+    );
+  }
 }

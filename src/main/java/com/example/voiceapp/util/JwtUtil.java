@@ -11,6 +11,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,7 +24,7 @@ public class JwtUtil {
     return Jwts.builder()
             .claim("sub", username)
             .issuedAt(Date.from(now))
-            .expiration(Date.from(now.plus(1, ChronoUnit.HOURS)))
+            .expiration(Date.from(now.plus(168, ChronoUnit.HOURS)))
             .signWith(
                     Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)),
                     SignatureAlgorithm.HS256)

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { WebsocketService } from '../../services/websocket.service';
-import { BrowserModule } from '@angular/platform-browser';
+import { ActivatedRoute } from '@angular/router';
+import { AuthenticationService } from '../../services/authentication.service';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ChatService } from '../../services/chat.service';
@@ -13,10 +14,19 @@ import { ChatService } from '../../services/chat.service';
 export class ChatComponent implements OnInit {
   messages: any[] = [];
   messageContent = '';
-  username = 'User' + Math.floor(Math.random() * 1000);
-  channel = 'history';
+  username: string = '';
+  channel: string = '';
 
-  constructor(private websocketService: WebsocketService,private chatService:ChatService) {}
+  constructor(private websocketService: WebsocketService,private chatService:ChatService,private params:ActivatedRoute,private authService:AuthenticationService) {
+    this.params.params.subscribe((params) => {
+      this.channel = params['channel'];
+      console.log('Channel:', this.channel);
+    });
+    this.authService.getUsername().subscribe((username) => {
+      this.username = username;
+      console.log('Username:', this.username);
+    });
+  }
 
   ngOnInit() {
     this.websocketService.subscribeToChannel(`/channel/${this.channel}`, (message: any) => {

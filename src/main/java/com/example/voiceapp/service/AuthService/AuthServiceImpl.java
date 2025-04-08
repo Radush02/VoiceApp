@@ -3,10 +3,11 @@ package com.example.voiceapp.service.AuthService;
 import com.example.voiceapp.dtos.LoginDTO;
 import com.example.voiceapp.dtos.RegisterDTO;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public interface AuthServiceImpl {
 
-  Map<String, String> registerUser(RegisterDTO registerDTO);
+  CompletableFuture<Map<String, String>> registerUser(RegisterDTO registerDTO);
 
-  String authenticateUser(LoginDTO loginDTO);
+  CompletableFuture<String> authenticateUser(LoginDTO loginDTO);
 }
