@@ -3,6 +3,7 @@ package com.example.voiceapp.service.UserService;
 import com.example.voiceapp.collection.Channel;
 import com.example.voiceapp.collection.ChannelMembership;
 import com.example.voiceapp.collection.User;
+import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.repository.ChannelRepository;
 import com.example.voiceapp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +28,7 @@ public class UserService implements UserServiceImpl {
         Set<ChannelMembership> channels = currentUser.getChannels();
         Set<Channel> channelSet = new HashSet<>();
         for (ChannelMembership channel : channels) {
-            channelSet.add(channelRepository.findByVanityId(channel.getVanityId()));
+            channelSet.add(channelRepository.findByVanityId(channel.getVanityId()).orElseThrow(()->new NonExistentException("Channel not found")));
         }
         return CompletableFuture.completedFuture(channelSet);
     }

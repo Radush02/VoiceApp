@@ -1,5 +1,6 @@
 package com.example.voiceapp.service.MessageService;
 
+import com.example.voiceapp.collection.Channel;
 import com.example.voiceapp.collection.Message;
 import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.repository.ChannelRepository;
@@ -23,8 +24,9 @@ public class MessageService implements MessageServiceImpl {
 
   @Override
   public CompletableFuture<Message> saveMessage(Message message) {
-    if (channelRepository.existsByVanityId(message.getChannel())) {
-      throw new NonExistentException("Channel doesn't exist!");
+    Channel c = channelRepository.findByVanityId(message.getChannel()).orElseThrow(()->new NonExistentException("Channel not found"));
+    if(!c.getMembers().contains(message.getSender())){
+      throw new NonExistentException("You are not allowed to send a message in this channel.");
     }
     message.setDate(new Date());
     messageRepository.save(message);
@@ -33,7 +35,7 @@ public class MessageService implements MessageServiceImpl {
 
   @Override
   public CompletableFuture<List<Message>> fetchMessagesByChannel(String channel, Integer limit) {
-    if (channelRepository.existsByVanityId(channel)) {
+    if (!channelRepository.existsByVanityId(channel)) {
       throw new NonExistentException("Channel doesn't exist!");
     }
     Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "date"));

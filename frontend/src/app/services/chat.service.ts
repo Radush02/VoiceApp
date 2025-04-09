@@ -14,4 +14,10 @@ export class ChatService {
   fetchMessages(channel: string, limit: number=50): Observable<any> {
     return this.http.get(`${this.apiLink}/${channel}`,{withCredentials:true});
   }
+
+  uploadImage(channel: string, image: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file',image);
+    return this.http.post(`${this.apiLink}/upload/${channel}`, formData, {withCredentials:true});
+  }
 }
