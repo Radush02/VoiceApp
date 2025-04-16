@@ -48,6 +48,7 @@ export class ChatComponent implements OnInit, AfterViewChecked {
       if (messages) {
         this.messages = messages;
       }
+      console.log('Fetched messages:', this.messages);
     });
     
     this.websocketService.getMessages().subscribe((message) => {
@@ -108,7 +109,7 @@ export class ChatComponent implements OnInit, AfterViewChecked {
       sender: this.username, 
       content: this.messageContent, 
       channel: this.channel,
-      imageUrl: imageUrl
+      attachment: imageUrl
     };
     
     console.log("Sending message:", message);
@@ -119,7 +120,7 @@ export class ChatComponent implements OnInit, AfterViewChecked {
   }
 
   async uploadImage(file: File): Promise<string> {
-
-    return await this.chatService.uploadImage(this.channel,file).toPromise();
+    const response = await this.chatService.uploadImage(this.channel,file).toPromise();
+    return response.message;
   }
 }

@@ -32,4 +32,11 @@ public class UserService implements UserServiceImpl {
         }
         return CompletableFuture.completedFuture(channelSet);
     }
+
+    @Override
+    public CompletableFuture<Set<String>> getRequests(){
+        User currentUser = userRepository.findByUsername(SecurityContextHolder.getContext().getAuthentication().getName()).orElseThrow();
+        Set<String> requests = currentUser.getRequests();
+        return CompletableFuture.completedFuture(requests);
+    }
 }

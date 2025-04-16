@@ -14,5 +14,6 @@ public class Message {
   private String sender;
   private String channel;
   private String content;
+  private String attachment;
   private Date date;
 }

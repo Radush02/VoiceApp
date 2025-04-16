@@ -5,6 +5,7 @@ import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Document(collection = "channels")
@@ -15,5 +16,5 @@ public class Channel {
   private String name;
   private String vanityId;
   private String createdBy;
-  private Set<String> members;
+  private Set<String> members = new HashSet<>();
 }

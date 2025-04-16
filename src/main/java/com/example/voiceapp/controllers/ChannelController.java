@@ -2,6 +2,7 @@ package com.example.voiceapp.controllers;
 
 import com.example.voiceapp.collection.Channel;
 import com.example.voiceapp.dtos.ChannelDTO;
+import com.example.voiceapp.dtos.CreateInviteDTO;
 import com.example.voiceapp.dtos.InviteDTO;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
@@ -22,19 +23,25 @@ public class ChannelController {
 
   @PostMapping("/create")
   @ResponseStatus(HttpStatus.CREATED)
-  public ResponseEntity<Channel> createChannel(@RequestBody ChannelDTO channelDTO) throws ExecutionException, InterruptedException {
-    CompletableFuture<Channel> ch = channelService.createChannel(channelDTO);
+  public ResponseEntity<Map<String,String>> createChannel(@RequestBody ChannelDTO channelDTO) throws ExecutionException, InterruptedException {
+    CompletableFuture<Map<String,String>> ch = channelService.createChannel(channelDTO);
     return new ResponseEntity<>(ch.get(), HttpStatus.CREATED);
+  }
+
+
+  @PostMapping("/createInvite")
+  @ResponseStatus(HttpStatus.CREATED)
+  public ResponseEntity<Map<String,String>> createInvite(@RequestBody CreateInviteDTO createInviteDTO) throws ExecutionException, InterruptedException {
+    CompletableFuture<Map<String,String>> invite = channelService.createInvite(createInviteDTO);
+    return new ResponseEntity<>(invite.get(),HttpStatus.CREATED);
   }
 
   @PostMapping("/join")
   @ResponseStatus(HttpStatus.CREATED)
   public ResponseEntity<Map<String,String>> joinChannel(@RequestBody InviteDTO inviteDTO) throws ExecutionException, InterruptedException {
-    CompletableFuture<Map<String,String>> join = channelService.joinChannel(inviteDTO);
-    return new ResponseEntity<>(join.get(),HttpStatus.CREATED);
-
+    CompletableFuture<Map<String,String>> invite = channelService.joinChannel(inviteDTO);
+    return new ResponseEntity<>(invite.get(),HttpStatus.CREATED);
   }
-
   @ExceptionHandler(AlreadyExistsException.class)
   public ResponseEntity<Map<String,String>> handleAlreadyExistsException(AlreadyExistsException e) {
     return new ResponseEntity<>(Map.of("Error",e.getMessage()), HttpStatus.CONFLICT);

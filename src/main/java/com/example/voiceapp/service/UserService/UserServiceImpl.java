@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 public interface UserServiceImpl {
-
-    public CompletableFuture<Set<Channel>> getChannels();
+    
+    CompletableFuture<Set<Channel>> getChannels();
+    CompletableFuture<Set<String>> getRequests();
 }

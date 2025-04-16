@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-
+import S3 from 'aws-sdk/clients/s3';
 
 @Injectable({
   providedIn: 'root'
@@ -20,4 +20,5 @@ export class ChatService {
     formData.append('file',image);
     return this.http.post(`${this.apiLink}/upload/${channel}`, formData, {withCredentials:true});
   }
+
 }

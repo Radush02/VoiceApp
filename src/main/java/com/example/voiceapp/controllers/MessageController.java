@@ -44,8 +44,8 @@ public class MessageController {
     }
 
     String fileName = channel + "/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
-    s3Service.uploadFile(fileName, file);
-    return ResponseEntity.ok(Map.of("message", fileName));
+    String url = s3Service.uploadFile(fileName, file);
+    return ResponseEntity.ok(Map.of("message", url));
   }
   @ExceptionHandler(AlreadyExistsException.class)
   public ResponseEntity<Map<String,String>> handleAlreadyExistsException(AlreadyExistsException e) {
