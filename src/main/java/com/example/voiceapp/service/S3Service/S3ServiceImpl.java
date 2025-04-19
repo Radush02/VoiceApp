@@ -6,8 +6,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface S3ServiceImpl {
 
-    public String uploadFile(String keyName, MultipartFile file) throws IOException;
+  public String uploadFile(String keyName, MultipartFile file) throws IOException;
 
-    public S3Object getFile(String keyName);
-
+  public S3Object getFile(String keyName);
 }

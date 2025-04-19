@@ -5,7 +5,6 @@ import lombok.Setter;
 
 @Setter
 @Getter
-public class MessageDTO {
-  private String sender;
-  private String content;
+public class SendRequestDTO {
+    String username;
 }

@@ -1,6 +1,5 @@
 package com.example.voiceapp.repository;
 
-import com.example.voiceapp.collection.ChannelMembership;
 import com.example.voiceapp.collection.User;
 import java.util.Optional;
 import org.springframework.data.mongodb.repository.MongoRepository;

@@ -5,13 +5,11 @@ import com.example.voiceapp.dtos.RegisterDTO;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.service.AuthService.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-
-import io.jsonwebtoken.ExpiredJwtException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -34,10 +32,12 @@ public class AuthController {
   }
 
   @PostMapping("/login")
-  public ResponseEntity<?> login(@RequestBody LoginDTO loginDTO, HttpServletResponse response) throws ExecutionException, InterruptedException {
+  public ResponseEntity<?> login(@RequestBody LoginDTO loginDTO, HttpServletResponse response)
+      throws ExecutionException, InterruptedException {
     CompletableFuture<String> token = authService.authenticateUser(loginDTO);
 
-    ResponseCookie jwtCookie = ResponseCookie.from("jwt", token.get())
+    ResponseCookie jwtCookie =
+        ResponseCookie.from("jwt", token.get())
             .httpOnly(true)
             .secure(false)
             .path("/")
@@ -47,46 +47,43 @@ public class AuthController {
 
     response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
 
-    return ResponseEntity.ok(Map.of("response","Login successful"));
+    return ResponseEntity.ok(Map.of("response", "Login successful"));
   }
 
   @PostMapping("/logout")
   public ResponseEntity<?> logout(HttpServletResponse response) {
-    ResponseCookie cookie = ResponseCookie.from("jwt", "")
-            .httpOnly(true)
-            .secure(false)
-            .path("/")
-            .maxAge(0)
-            .build();
+    ResponseCookie cookie =
+        ResponseCookie.from("jwt", "").httpOnly(true).secure(false).path("/").maxAge(0).build();
 
     response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
-    return ResponseEntity.ok(Map.of("response","Logged out successful"));
+    return ResponseEntity.ok(Map.of("response", "Logged out successful"));
   }
 
   @PostMapping("/check")
   public ResponseEntity<?> isAuthenticated(HttpServletRequest response) {
     System.out.println(response);
-      return ResponseEntity.ok(Map.of("isAuthenticated", true));
+    return ResponseEntity.ok(Map.of("isAuthenticated", true));
   }
 
   @GetMapping("/user/me")
   public ResponseEntity<?> getCurrentUser() {
-    return ResponseEntity.ok(Map.of("username",authService.extractUsername()));
+    return ResponseEntity.ok(Map.of("username", authService.extractUsername()));
   }
+
   @ExceptionHandler(AlreadyExistsException.class)
-  public ResponseEntity<Map<String,String>> handleAlreadyExistsException(AlreadyExistsException e) {
-    return new ResponseEntity<>(Map.of("Error",e.getMessage()), HttpStatus.CONFLICT);
+  public ResponseEntity<Map<String, String>> handleAlreadyExistsException(
+      AlreadyExistsException e) {
+    return new ResponseEntity<>(Map.of("Error", e.getMessage()), HttpStatus.CONFLICT);
   }
 
   @ExceptionHandler(NonExistentException.class)
-  public ResponseEntity<Map<String,String>> handleNonExistentException(NonExistentException e) {
-    return new ResponseEntity<>(Map.of("Error",e.getMessage()), HttpStatus.NOT_FOUND);
+  public ResponseEntity<Map<String, String>> handleNonExistentException(NonExistentException e) {
+    return new ResponseEntity<>(Map.of("Error", e.getMessage()), HttpStatus.NOT_FOUND);
   }
 
   @ExceptionHandler(RuntimeException.class)
-  public ResponseEntity<Map<String,String>> handleRuntimeException(RuntimeException e) {
-    return new ResponseEntity<>(Map.of("Error",e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+  public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException e) {
+    return new ResponseEntity<>(Map.of("Error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
   }
-
 }

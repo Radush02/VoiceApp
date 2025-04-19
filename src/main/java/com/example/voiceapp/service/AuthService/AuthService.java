@@ -10,7 +10,6 @@ import com.example.voiceapp.util.JwtUtil;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -33,10 +32,14 @@ public class AuthService implements AuthServiceImpl {
     User newUser =
         new User(
             null,
+            "",
             registerDTO.getUsername(),
             passwordEncoder.encode(registerDTO.getPassword()),
             registerDTO.getEmail(),
-            new HashSet<>());
+            "",
+            "",
+            new HashSet<>(),new HashSet<>(),new HashSet<>());
+
     userRepository.save(newUser);
     return CompletableFuture.completedFuture(Map.of("message", "User registered successfully"));
   }

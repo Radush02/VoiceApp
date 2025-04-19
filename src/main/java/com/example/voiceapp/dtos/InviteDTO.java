@@ -1,6 +1,5 @@
 package com.example.voiceapp.dtos;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,5 +8,5 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 public class InviteDTO {
-    private String inviteId;
+  private String inviteId;
 }

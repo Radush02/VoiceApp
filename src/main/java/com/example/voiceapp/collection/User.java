@@ -9,8 +9,6 @@ import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-
-
 @Document(collection = "users")
 @Getter
 @Setter
@@ -18,9 +16,12 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @NoArgsConstructor
 public class User {
   @Id private String id;
+  private String imageLink;
   private String username;
   private String password;
   private String email;
+  private String status;
+  private String aboutMe;
   private Set<ChannelMembership> channels = new HashSet<>();
   private Set<String> friends = new HashSet<>();
   private Set<String> requests = new HashSet<>();

@@ -1,12 +1,25 @@
-<form [formGroup]="serverForm" (ngSubmit)="onSubmit()">
-  <div>
-    <label for="serverName">Server Name:</label>
-    <input id="serverName" formControlName="serverName" type="text" />
-  </div>
+<div class="backdrop">
+  <div class="modal">
+    <button class="close-btn" (click)="onClose()">×</button>
+    <h2>Create Server</h2>
 
-  <div>
-    <label for="vanityId">Vanity ID:</label>
-    <input id="vanityId" formControlName="vanityId" type="text" />
-  </div>
+    <form [formGroup]="serverForm" (ngSubmit)="createServer()">
+      <label for="serverName">Server Name</label>
+      <input id="serverName" formControlName="serverName" />
+      <div *ngIf="serverForm.get('serverName')?.touched && serverForm.get('serverName')?.invalid" class="error">
+        This field is required.
+      </div>
 
-  <button type="submit" [disabled]="serverForm.invalid">Submit</button>
+      <label for="vanityId">Vanity ID</label>
+      <input id="vanityId" formControlName="vanityId" />
+      <div *ngIf="serverForm.get('vanityId')?.touched && serverForm.get('vanityId')?.invalid" class="error">
+        This field is required.
+      </div>
+
+      <label for="photo">Photo (optional)</label>
+      <input id="photo" type="file" (change)="onFileSelected($event)" />
+
+      <button type="submit" [disabled]="serverForm.invalid">Create Server</button>
+    </form>
+  </div>
+</div>

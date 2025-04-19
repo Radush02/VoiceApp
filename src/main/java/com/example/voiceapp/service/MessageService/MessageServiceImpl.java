@@ -12,5 +12,5 @@ public interface MessageServiceImpl {
    */
   CompletableFuture<Message> saveMessage(Message message);
 
- CompletableFuture<List<Message>> fetchMessagesByChannel(String channel, Integer limit);
+  CompletableFuture<List<Message>> fetchMessagesByChannel(String channel, Integer limit);
 }

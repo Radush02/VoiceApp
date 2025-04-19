@@ -24,8 +24,11 @@ public class MessageService implements MessageServiceImpl {
 
   @Override
   public CompletableFuture<Message> saveMessage(Message message) {
-    Channel c = channelRepository.findByVanityId(message.getChannel()).orElseThrow(()->new NonExistentException("Channel not found"));
-    if(!c.getMembers().contains(message.getSender())){
+    Channel c =
+        channelRepository
+            .findByVanityId(message.getChannel())
+            .orElseThrow(() -> new NonExistentException("Channel not found"));
+    if (!c.getMembers().contains(message.getSender())) {
       throw new NonExistentException("You are not allowed to send a message in this channel.");
     }
     message.setDate(new Date());
@@ -39,7 +42,8 @@ public class MessageService implements MessageServiceImpl {
       throw new NonExistentException("Channel doesn't exist!");
     }
     Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "date"));
-    return CompletableFuture.completedFuture(messageRepository.findAllByChannel(channel, pageable).stream()
+    return CompletableFuture.completedFuture(
+        messageRepository.findAllByChannel(channel, pageable).stream()
             .sorted(Comparator.comparing(Message::getDate))
             .collect(Collectors.toList()));
   }

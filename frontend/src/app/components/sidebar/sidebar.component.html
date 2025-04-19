@@ -1,0 +1,45 @@
+<div class="sidebar">
+    <div class="top">
+      <button class="create-btn" (click)="openCreatePopup()">+</button>
+    </div>
+  
+    <div class="server-list">
+      <ng-container *ngFor="let ch of channels">
+        <div class="server-item" [title]="ch.name" [routerLink]="['/chat', ch.vanityId]">
+          <img
+            *ngIf="ch.imageLink; else letterIcon"
+            [src]="ch.imageLink"
+            [alt]="ch.name"
+          />
+          <ng-template #letterIcon>
+            <div class="default-icon">{{ ch.name.charAt(0) }}</div>
+          </ng-template>
+        </div>
+      </ng-container>
+    </div>
+  
+    <ng-container *ngIf="user as u">
+      <div class="user-info">
+        <img
+          *ngIf="u.imageLink; else userLetter"
+          [src]="u.imageLink"
+          [alt]="u.username"
+          class="avatar"
+        />
+        <ng-template #userLetter>
+          <div class="avatar default-user">{{ u.username.charAt(0) }}</div>
+        </ng-template>
+  
+        <div class="user-details">
+          <div class="username">{{ u.username }}</div>
+          <div class="status">{{ u.status }}</div>
+        </div>
+      </div>
+    </ng-container>
+  
+    <app-server-popup
+      *ngIf="showCreatePopup"
+      (close)="closeCreatePopup()">
+    </app-server-popup>
+  </div>
+  

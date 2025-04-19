@@ -1,6 +1,6 @@
-import { Component } from "@angular/core"
-import { FormBuilder, FormGroup, FormsModule, Validators } from "@angular/forms"
-import { ServerPopupService } from "../../services/server-popup.service"
+import { Component, EventEmitter, Output } from '@angular/core';
+import { FormBuilder, FormGroup, Validators,FormsModule } from '@angular/forms';
+import { ChannelService } from "../../services/channel.service"
 import { CommonModule } from "@angular/common"
 import { ReactiveFormsModule } from "@angular/forms"
 
@@ -11,29 +11,54 @@ import { ReactiveFormsModule } from "@angular/forms"
   imports: [FormsModule,CommonModule,ReactiveFormsModule]
 })
 export class ServerPopupComponent {
-  serverForm: FormGroup
+  @Output() close = new EventEmitter<void>();
 
-  constructor(private fb: FormBuilder, private serverPopupService: ServerPopupService) {
+  serverForm: FormGroup;
+
+  constructor(
+    private fb: FormBuilder,
+    private channelService: ChannelService
+  ) {
     this.serverForm = this.fb.group({
-      serverName: ["", [Validators.required, Validators.minLength(3), Validators.maxLength(30)]],
-      vanityId: [
-        "",
-        [Validators.required, Validators.pattern("^[a-z0-9-]+$"), Validators.minLength(3), Validators.maxLength(20)],
-      ]
-    })
+      serverName: ['', Validators.required],
+      vanityId: ['', Validators.required],
+      photo: [null]
+    });
   }
 
-  onSubmit(): void {
-    if (this.serverForm.valid) {
-      this.serverPopupService.createChannel(this.serverForm.value.serverName, this.serverForm.value.vanityId).subscribe(
-        (response) => {
-          console.log(response)
-        }
-      )
-    } else {
-      this.serverForm.markAllAsTouched()
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) {
+      this.serverForm.patchValue({ photo: null });
+      return;
     }
+
+    const file = input.files[0];
+    this.serverForm.patchValue({ photo: file });
   }
 
+  createServer(): void {
+    if (this.serverForm.invalid) {
+      this.serverForm.markAllAsTouched();
+      return;
+    }
+
+    const { serverName, vanityId, photo } = this.serverForm.value as {
+      serverName: string;
+      vanityId: string;
+      photo: File | null;
+    };
+
+    this.channelService
+      .createChannel(serverName, vanityId, photo ?? undefined)
+      .subscribe({
+        next: () => this.close.emit(),
+        error: err => console.error('Create failed', err)
+      });
+  }
+
+  onClose(): void {
+    this.close.emit();
+  }
 
 }

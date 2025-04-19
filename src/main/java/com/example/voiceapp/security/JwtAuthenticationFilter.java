@@ -23,8 +23,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   @Autowired private UserDetailsService userDetailsService;
 
   @Override
-  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-          throws ServletException, IOException {
+  protected void doFilterInternal(
+      HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+      throws ServletException, IOException {
     Cookie[] cookies = request.getCookies();
     String token = null;
 
@@ -42,18 +43,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         if (jwtUtil.isTokenValid(token, userDetails.getUsername())) {
           UsernamePasswordAuthenticationToken authToken =
-                  new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+              new UsernamePasswordAuthenticationToken(
+                  userDetails, null, userDetails.getAuthorities());
           SecurityContextHolder.getContext().setAuthentication(authToken);
         }
-//        System.out.println("Token: " + token);
-//        System.out.println("Username: " + username);
-//        System.out.println("Token valid: " + jwtUtil.isTokenValid(token, username));
+        //        System.out.println("Token: " + token);
+        //        System.out.println("Username: " + username);
+        //        System.out.println("Token valid: " + jwtUtil.isTokenValid(token, username));
       }
-
-
     }
-   /// System.out.println("Context: " + SecurityContextHolder.getContext().getAuthentication());
+    /// System.out.println("Context: " + SecurityContextHolder.getContext().getAuthentication());
     chain.doFilter(request, response);
   }
-
 }
