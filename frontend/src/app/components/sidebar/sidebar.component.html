@@ -29,8 +29,8 @@
         <ng-template #userLetter>
           <div class="avatar default-user">{{ u.username.charAt(0) }}</div>
         </ng-template>
-  
-        <div class="user-details">
+
+        <div class="user-details"  (click)="openProfilePopup()">
           <div class="username">{{ u.username }}</div>
           <div class="status">{{ u.status }}</div>
         </div>

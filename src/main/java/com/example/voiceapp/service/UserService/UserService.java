@@ -4,10 +4,7 @@ import com.example.voiceapp.Enum.RequestResponse;
 import com.example.voiceapp.collection.Channel;
 import com.example.voiceapp.collection.ChannelMembership;
 import com.example.voiceapp.collection.User;
-import com.example.voiceapp.dtos.ProcessFriendRequestDTO;
-import com.example.voiceapp.dtos.PublicUserDTO;
-import com.example.voiceapp.dtos.SendRequestDTO;
-import com.example.voiceapp.dtos.UserDTO;
+import com.example.voiceapp.dtos.*;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.repository.ChannelRepository;
@@ -18,7 +15,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -31,6 +32,10 @@ public class UserService implements UserServiceImpl {
   @Autowired private ChannelRepository channelRepository;
   @Autowired private S3Service s3Service;
 
+    @Qualifier("taskExecutor")
+    @Autowired private Executor taskExecutor;
+
+  
   @Override
   public CompletableFuture<Set<Channel>> getChannels() {
 
@@ -48,7 +53,7 @@ public class UserService implements UserServiceImpl {
     }
     return CompletableFuture.completedFuture(channelSet);
   }
-
+  
   @Override
   public CompletableFuture<Set<String>> getRequests() {
     User currentUser =
@@ -58,7 +63,7 @@ public class UserService implements UserServiceImpl {
     Set<String> requests = currentUser.getRequests();
     return CompletableFuture.completedFuture(requests);
   }
-
+  
   @Override
   public CompletableFuture<Map<String, String>> sendRequest(SendRequestDTO requestDTO) {
     System.out.println(requestDTO.getUsername());
@@ -84,7 +89,7 @@ public class UserService implements UserServiceImpl {
 
     return CompletableFuture.completedFuture(Map.of("Response", "Friend request sent!"));
   }
-
+  
   @Override
   public CompletableFuture<Map<String, String>> processRequest(ProcessFriendRequestDTO requestDTO) {
     User user =
@@ -118,21 +123,27 @@ public class UserService implements UserServiceImpl {
 
   @Override
   public CompletableFuture<UserDTO> getUser() {
-    User user =
-        userRepository
-            .findByUsername(SecurityContextHolder.getContext().getAuthentication().getName())
-            .orElseThrow(() -> new NonExistentException("User not found"));
-    UserDTO userDTO = new UserDTO();
-    userDTO.setImageLink(user.getImageLink());
-    userDTO.setStatus(user.getStatus());
-    userDTO.setUsername(user.getUsername());
-    userDTO.setAboutMe(user.getAboutMe());
-    userDTO.setChannels(user.getChannels());
-    userDTO.setRequests(user.getRequests());
-    userDTO.setFriends(user.getFriends());
-    return CompletableFuture.completedFuture(userDTO);
+
+    String username = SecurityContextHolder.getContext().getAuthentication().getName();
+    System.out.println("Starting UserRepository lookup for " + username);
+
+    return CompletableFuture.supplyAsync(() -> {
+      User user = userRepository
+              .findByUsername(username)
+              .orElseThrow(() -> new NonExistentException("User not found"));
+      UserDTO userDTO = new UserDTO();
+      userDTO.setImageLink(user.getImageLink());
+      userDTO.setStatus(user.getStatus());
+      userDTO.setUsername(user.getUsername());
+      userDTO.setAboutMe(user.getAboutMe());
+      userDTO.setChannels(user.getChannels());
+      userDTO.setRequests(user.getRequests());
+      userDTO.setFriends(user.getFriends());
+      return userDTO;
+    },taskExecutor);
   }
 
+  
   @Override
   public CompletableFuture<PublicUserDTO> getPublicUser(String username) {
     User user =
@@ -154,16 +165,46 @@ public class UserService implements UserServiceImpl {
     return CompletableFuture.completedFuture(publicUserDTO);
   }
 
+  
   @Override
-  public CompletableFuture<Map<String, String>> uploadProfilePicture(MultipartFile file)
-      throws IOException {
-    User u =
-        userRepository
+  public CompletableFuture<Map<String, String>> uploadProfilePicture(MultipartFile file) throws IOException {
+    User u = userRepository
             .findByUsername(SecurityContextHolder.getContext().getAuthentication().getName())
             .orElseThrow(() -> new NonExistentException("User not found"));
-    String fileName = "pfp/" + u.getUsername() +"."+ StringUtils.getFilenameExtension(file.getOriginalFilename());
-    u.setImageLink(s3Service.uploadFile(fileName, file));
+
+    String fileName = "pfp/" + u.getUsername() + "." +
+            StringUtils.getFilenameExtension(file.getOriginalFilename());
+
+    return s3Service.uploadFile(fileName, file)
+            .thenApply(imageUrl -> {
+              u.setImageLink(imageUrl);
+              userRepository.save(u);
+              return Map.of("Response", "Profile picture uploaded.");
+            });
+  }
+
+
+  
+  @Override
+  public CompletableFuture<Map<String,String>> updateAboutMe(SingleInputDTO input){
+    User u = userRepository.findByUsername(SecurityContextHolder.getContext().getAuthentication().getName()).orElseThrow(() -> new NonExistentException("User not found"));
+    u.setAboutMe(input.getInput());
     userRepository.save(u);
-    return CompletableFuture.completedFuture(Map.of("Response", "Profile picture uploaded."));
+    return CompletableFuture.completedFuture(Map.of("Response", "Updated about me"));
+  }
+
+  
+  @Override
+  public CompletableFuture<Map<String,String>> updateStatus(SingleInputDTO input){
+    User u = userRepository.findByUsername(SecurityContextHolder.getContext().getAuthentication().getName()).orElseThrow(() -> new NonExistentException("User not found"));
+    u.setStatus(input.getInput());
+    userRepository.save(u);
+    return CompletableFuture.completedFuture(Map.of("Response", "Updated status"));
+  }
+
+  @Override
+  public CompletableFuture<Map<String,Set<String>>> getFriends(){
+    User u = userRepository.findByUsername(SecurityContextHolder.getContext().getAuthentication().getName()).orElseThrow(() -> new NonExistentException("User not found"));
+    return CompletableFuture.completedFuture(Map.of("Friends", u.getFriends()));
   }
 }

@@ -25,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import com.example.voiceapp.service.S3Service.S3Service;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -37,6 +38,7 @@ public class ChannelService implements ChannelServiceImpl {
   @Autowired private InviteRepository inviteRepository;
   @Autowired private S3Service s3Service;
 
+  
   @Override
   public CompletableFuture<Map<String, String>> createChannel(ChannelDTO channel) throws IOException {
     User u =
@@ -54,14 +56,17 @@ public class ChannelService implements ChannelServiceImpl {
     newChannel.getMembers().add(authService.extractUsername());
     u.getChannels().add(new ChannelMembership(newChannel.getVanityId(), Role.ADMIN,new Date()));
     String fileName = channel.getVanityId() + "." + StringUtils.getFilenameExtension(channel.getFile().getOriginalFilename());
-    System.out.println(fileName);
-    newChannel.setImageLink(s3Service.uploadFile(fileName, channel.getFile()));
-    channelRepository.save(newChannel);
-    userRepository.save(u);
-    System.out.println("done");
-    return CompletableFuture.completedFuture(Map.of("Created", newChannel.getVanityId()));
+    return s3Service.uploadFile(fileName, channel.getFile())
+            .thenApply(imageUrl -> {
+              newChannel.setImageLink(imageUrl);
+              channelRepository.save(newChannel);
+              userRepository.save(u);
+              return Map.of("Created", newChannel.getVanityId());
+            });
   }
 
+  
+  @Override
   public CompletableFuture<Map<String, String>> joinChannel(InviteDTO inviteDTO) {
     String currentUser = authService.extractUsername();
 

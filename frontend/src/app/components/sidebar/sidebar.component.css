@@ -91,6 +91,23 @@
       }
     }
   }
+  .my-profile {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    cursor: pointer;
+  
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+  
+    &:hover {
+      background: rgba(0,0,0,0.04);
+    }
+  }
   
   :host {
     display: block;

@@ -5,64 +5,69 @@ import com.example.voiceapp.dtos.RegisterDTO;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.service.AuthService.AuthService;
+import com.example.voiceapp.service.AuthService.AuthServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.async.DeferredResult;
 
 @RestController
 @RequestMapping("api/auth")
 public class AuthController {
 
-  @Autowired private AuthService authService;
+  @Autowired private AuthServiceImpl authService;
 
   @PostMapping("/register")
-  public ResponseEntity<?> register(@RequestBody RegisterDTO registerDTO) {
-    //        System.out.println(registerDTO.getUsername());
-    //        System.out.println(registerDTO.getPassword());
-    //        System.out.println(registerDTO.getEmail());
-    return new ResponseEntity<>(authService.registerUser(registerDTO), HttpStatus.CREATED);
+  public DeferredResult<ResponseEntity<Map<String, String>>> register(@RequestBody RegisterDTO registerDTO) {
+    DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
+    authService.registerUser(registerDTO).thenAccept(result ->
+            output.setResult(new ResponseEntity<>(result, HttpStatus.CREATED))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
   }
 
   @PostMapping("/login")
-  public ResponseEntity<?> login(@RequestBody LoginDTO loginDTO, HttpServletResponse response)
-      throws ExecutionException, InterruptedException {
-    CompletableFuture<String> token = authService.authenticateUser(loginDTO);
-
-    ResponseCookie jwtCookie =
-        ResponseCookie.from("jwt", token.get())
-            .httpOnly(true)
-            .secure(false)
-            .path("/")
-            .maxAge(60 * 60 * 24)
-            .sameSite("Strict")
-            .build();
-
-    response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
-
-    return ResponseEntity.ok(Map.of("response", "Login successful"));
+  public DeferredResult<ResponseEntity<Map<String, String>>> login(@RequestBody LoginDTO loginDTO, HttpServletResponse response) {
+    DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
+    authService.authenticateUser(loginDTO).thenAccept(token -> {
+      ResponseCookie jwtCookie = ResponseCookie.from("jwt", token)
+              .httpOnly(true)
+              .secure(false)
+              .path("/")
+              .maxAge(60 * 60 * 24)
+              .sameSite("Strict")
+              .build();
+      response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
+      output.setResult(ResponseEntity.ok(Map.of("response", "Login successful")));
+    }).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+              .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
   }
 
   @PostMapping("/logout")
   public ResponseEntity<?> logout(HttpServletResponse response) {
-    ResponseCookie cookie =
-        ResponseCookie.from("jwt", "").httpOnly(true).secure(false).path("/").maxAge(0).build();
-
+    ResponseCookie cookie = ResponseCookie.from("jwt", "").httpOnly(true).secure(false).path("/").maxAge(0).build();
     response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-
-    return ResponseEntity.ok(Map.of("response", "Logged out successful"));
+    return ResponseEntity.ok(Map.of("response", "Logged out successfully"));
   }
 
   @PostMapping("/check")
-  public ResponseEntity<?> isAuthenticated(HttpServletRequest response) {
-    System.out.println(response);
+  public ResponseEntity<?> isAuthenticated(HttpServletRequest request) {
     return ResponseEntity.ok(Map.of("isAuthenticated", true));
   }
 
@@ -72,8 +77,7 @@ public class AuthController {
   }
 
   @ExceptionHandler(AlreadyExistsException.class)
-  public ResponseEntity<Map<String, String>> handleAlreadyExistsException(
-      AlreadyExistsException e) {
+  public ResponseEntity<Map<String, String>> handleAlreadyExistsException(AlreadyExistsException e) {
     return new ResponseEntity<>(Map.of("Error", e.getMessage()), HttpStatus.CONFLICT);
   }
 

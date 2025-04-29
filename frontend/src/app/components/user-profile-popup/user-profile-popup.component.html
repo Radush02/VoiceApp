@@ -1,0 +1,55 @@
+<mat-card class="profile-popup">
+  <mat-card-header>
+    <div mat-card-avatar class="avatar">
+      <ng-container *ngIf="user.imageLink;" >
+        <img [src]="user.imageLink" alt="{{ user.username }}'s avatar" />
+      </ng-container>
+      <ng-container *ngIf="!user.imageLink">
+        <ng-template #letterIcon>
+          <div class="default-icon">{{ user.username.charAt(0) }}</div>
+        </ng-template>
+      </ng-container>
+      <input
+        type="file"
+        #fileInput
+        accept="image/*"
+        (change)="onImageSelected($event)"
+      />
+      <button
+      mat-icon-button
+      matTooltip="Change profile picture"
+      (click)="changeProfilePicture()"
+    >
+      <mat-icon>camera_alt</mat-icon>
+    </button>
+    </div>
+    <mat-card-title>{{ user.username }}</mat-card-title>
+    <mat-card-subtitle>{{ user.status }}</mat-card-subtitle>
+    <ng-container *ngIf="isSelf()">
+      
+    </ng-container>
+  </mat-card-header>
+
+  <mat-card-content>
+    <p><strong>About me:</strong></p>
+    <p>{{ user.aboutMe || 'No information provided.' }}</p>
+
+    <ng-container *ngIf="isSelf()">
+      <p><strong>Channels:</strong> {{ channelsCount }}</p>
+      <p><strong>Friend requests pending:</strong> {{ requestsCount }}</p>
+    </ng-container>
+
+    <ng-container *ngIf="!isSelf()">
+      <p><strong>Friends in common:</strong>
+        <ng-container *ngIf="user.friends.length; else none">
+          {{ user.friends.join(', ') }}
+        </ng-container>
+        <ng-template #none>None</ng-template>
+      </p>
+      </ng-container> 
+  </mat-card-content>
+
+  <mat-card-actions align="end">
+    <button mat-button (click)="close()">Close</button>
+  </mat-card-actions>
+</mat-card>

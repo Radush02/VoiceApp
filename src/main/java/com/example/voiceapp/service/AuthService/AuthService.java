@@ -22,6 +22,8 @@ public class AuthService implements AuthServiceImpl {
   private final JwtUtil jwtUtil;
   private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+
+  @Override
   public CompletableFuture<Map<String, String>> registerUser(RegisterDTO registerDTO) {
     if (userRepository.existsByEmail(registerDTO.getEmail())) {
       throw new AlreadyExistsException("There's already a user with this email.");
@@ -44,6 +46,7 @@ public class AuthService implements AuthServiceImpl {
     return CompletableFuture.completedFuture(Map.of("message", "User registered successfully"));
   }
 
+  @Override
   public CompletableFuture<String> authenticateUser(LoginDTO loginDTO) {
     User user =
         userRepository
@@ -56,6 +59,7 @@ public class AuthService implements AuthServiceImpl {
     return CompletableFuture.completedFuture(jwtUtil.generateToken(user.getUsername()));
   }
 
+  @Override
   public String extractUsername() {
     return SecurityContextHolder.getContext().getAuthentication().getName();
   }

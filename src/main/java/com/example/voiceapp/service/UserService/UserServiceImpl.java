@@ -1,10 +1,8 @@
 package com.example.voiceapp.service.UserService;
 
 import com.example.voiceapp.collection.Channel;
-import com.example.voiceapp.dtos.ProcessFriendRequestDTO;
-import com.example.voiceapp.dtos.PublicUserDTO;
-import com.example.voiceapp.dtos.SendRequestDTO;
-import com.example.voiceapp.dtos.UserDTO;
+import com.example.voiceapp.dtos.*;
+
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
@@ -27,4 +25,10 @@ public interface UserServiceImpl {
 
   CompletableFuture<Map<String, String>> uploadProfilePicture(MultipartFile file)
       throws IOException;
+
+  CompletableFuture<Map<String,String>> updateAboutMe(SingleInputDTO input);
+
+  CompletableFuture<Map<String,String>> updateStatus(SingleInputDTO input);
+
+    CompletableFuture<Map<String,Set<String>>> getFriends();
 }

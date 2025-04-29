@@ -6,52 +6,67 @@ import com.example.voiceapp.dtos.InviteDTO;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.service.ChannelService.ChannelService;
-
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+
+import com.example.voiceapp.service.ChannelService.ChannelServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.async.DeferredResult;
 
 @RestController
 @RequestMapping("/api/channel")
 public class ChannelController {
-  @Autowired private ChannelService channelService;
+  @Autowired private ChannelServiceImpl channelService;
 
-  @PostMapping(path="/create",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PostMapping(path = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   @ResponseStatus(HttpStatus.CREATED)
   @CrossOrigin(origins = "*", allowedHeaders = "*", exposedHeaders = "Content-Disposition")
-  public ResponseEntity<Map<String, String>> createChannel(@ModelAttribute ChannelDTO channelDTO)
-          throws ExecutionException, InterruptedException, IOException {
-    System.out.println(channelDTO.getName());
-    CompletableFuture<Map<String, String>> ch = channelService.createChannel(channelDTO);
-    return new ResponseEntity<>(ch.get(), HttpStatus.CREATED);
+  public DeferredResult<ResponseEntity<Map<String, String>>> createChannel(@ModelAttribute ChannelDTO channelDTO) throws IOException {
+    DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
+    channelService.createChannel(channelDTO).thenAccept(result ->
+            output.setResult(new ResponseEntity<>(result, HttpStatus.CREATED))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
   }
 
   @PostMapping("/createInvite")
   @ResponseStatus(HttpStatus.CREATED)
-  public ResponseEntity<Map<String, String>> createInvite(
-      @RequestBody CreateInviteDTO createInviteDTO)
-      throws ExecutionException, InterruptedException {
-    CompletableFuture<Map<String, String>> invite = channelService.createInvite(createInviteDTO);
-    return new ResponseEntity<>(invite.get(), HttpStatus.CREATED);
+  public DeferredResult<ResponseEntity<Map<String, String>>> createInvite(@RequestBody CreateInviteDTO createInviteDTO) {
+    DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
+    channelService.createInvite(createInviteDTO).thenAccept(result ->
+            output.setResult(new ResponseEntity<>(result, HttpStatus.CREATED))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
   }
 
   @PostMapping("/join")
   @ResponseStatus(HttpStatus.CREATED)
-  public ResponseEntity<Map<String, String>> joinChannel(@RequestBody InviteDTO inviteDTO)
-      throws ExecutionException, InterruptedException {
-    CompletableFuture<Map<String, String>> invite = channelService.joinChannel(inviteDTO);
-    return new ResponseEntity<>(invite.get(), HttpStatus.CREATED);
+  public DeferredResult<ResponseEntity<Map<String, String>>> joinChannel(@RequestBody InviteDTO inviteDTO) {
+    DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
+    channelService.joinChannel(inviteDTO).thenAccept(result ->
+            output.setResult(new ResponseEntity<>(result, HttpStatus.CREATED))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
   }
 
   @ExceptionHandler(AlreadyExistsException.class)
-  public ResponseEntity<Map<String, String>> handleAlreadyExistsException(
-      AlreadyExistsException e) {
+  public ResponseEntity<Map<String, String>> handleAlreadyExistsException(AlreadyExistsException e) {
     return new ResponseEntity<>(Map.of("Error", e.getMessage()), HttpStatus.CONFLICT);
   }
 

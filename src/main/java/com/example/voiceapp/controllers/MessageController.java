@@ -4,53 +4,74 @@ import com.example.voiceapp.collection.Message;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.service.MessageService.MessageService;
+import com.example.voiceapp.service.MessageService.MessageServiceImpl;
 import com.example.voiceapp.service.S3Service.S3Service;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+
+import com.example.voiceapp.service.S3Service.S3ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/messages")
 public class MessageController {
 
-  @Autowired private MessageService messageService;
-  @Autowired private S3Service s3Service;
+  @Autowired private MessageServiceImpl messageService;
+  @Autowired private S3ServiceImpl s3Service;
 
   @GetMapping("/{channel}")
-  public ResponseEntity<List<Message>> getMessages(
-      @PathVariable String channel,
-      @RequestParam(required = false, defaultValue = "20") Integer limit)
-      throws ExecutionException, InterruptedException {
-    CompletableFuture<List<Message>> messages =
-        messageService.fetchMessagesByChannel(channel, limit);
-    return new ResponseEntity<>(messages.get(), HttpStatus.OK);
+  public DeferredResult<ResponseEntity<List<Message>>> getMessages(
+          @PathVariable String channel,
+          @RequestParam(required = false, defaultValue = "20") Integer limit) {
+
+    DeferredResult<ResponseEntity<List<Message>>> output = new DeferredResult<>();
+    messageService.fetchMessagesByChannel(channel, limit).thenAccept(messages ->
+            output.setResult(new ResponseEntity<>(messages, HttpStatus.OK))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(null));
+      return null;
+    });
+    return output;
   }
 
   @PostMapping("/upload/{channel}")
   @CrossOrigin(origins = "*", allowedHeaders = "*", exposedHeaders = "Content-Disposition")
-  public ResponseEntity<Map<String, String>> upload(
-      @PathVariable String channel, @RequestParam("file") MultipartFile file) throws IOException {
+  public DeferredResult<ResponseEntity<Map<String, String>>> upload(
+          @PathVariable String channel, @RequestParam("file") MultipartFile file) throws IOException {
+
+    DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
 
     if (file.isEmpty()) {
-      throw new RuntimeException("File is empty");
+      output.setErrorResult(ResponseEntity.status(HttpStatus.BAD_REQUEST)
+              .body(Map.of("Error", "File is empty")));
+      return output;
     }
 
     String fileName = channel + "/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
-    String url = s3Service.uploadFile(fileName, file);
-    return ResponseEntity.ok(Map.of("message", url));
+
+    s3Service.uploadFile(fileName, file)
+            .thenApply(url -> ResponseEntity.ok(Map.of("message", url)))
+            .thenAccept(output::setResult)
+            .exceptionally(ex -> {
+              output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                      .body(Map.of("Error", ex.getMessage())));
+              return null;
+            });
+
+    return output;
   }
 
   @ExceptionHandler(AlreadyExistsException.class)
   public ResponseEntity<Map<String, String>> handleAlreadyExistsException(
-      AlreadyExistsException e) {
+          AlreadyExistsException e) {
     return new ResponseEntity<>(Map.of("Error", e.getMessage()), HttpStatus.CONFLICT);
   }
 

@@ -1,5 +1,6 @@
 package com.example.voiceapp.dtos;
 
+import com.example.voiceapp.Enum.Status;
 import com.example.voiceapp.collection.ChannelMembership;
 import java.util.HashSet;
 import java.util.Set;

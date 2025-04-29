@@ -1,6 +1,7 @@
 package com.example.voiceapp.security;
 
 import com.example.voiceapp.util.JwtUtil;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -21,7 +22,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   @Autowired private JwtUtil jwtUtil;
 
   @Autowired private UserDetailsService userDetailsService;
-
+  private void clearJwtCookie(HttpServletResponse response) {
+    Cookie cookie = new Cookie("jwt", null);
+    cookie.setHttpOnly(true);
+    cookie.setSecure(true);
+    cookie.setPath("/");
+    cookie.setMaxAge(0);
+    response.addCookie(cookie);
+  }
   @Override
   protected void doFilterInternal(
       HttpServletRequest request, HttpServletResponse response, FilterChain chain)
@@ -38,21 +46,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     if (token != null) {
-      String username = jwtUtil.extractUsername(token);
-      if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-        if (jwtUtil.isTokenValid(token, userDetails.getUsername())) {
-          UsernamePasswordAuthenticationToken authToken =
-              new UsernamePasswordAuthenticationToken(
-                  userDetails, null, userDetails.getAuthorities());
-          SecurityContextHolder.getContext().setAuthentication(authToken);
+      try{
+        String username = jwtUtil.extractUsername(token);
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+          UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+          if (jwtUtil.isTokenValid(token, userDetails.getUsername())) {
+            UsernamePasswordAuthenticationToken authToken =
+                    new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(authToken);
+          }
         }
-        //        System.out.println("Token: " + token);
-        //        System.out.println("Username: " + username);
-        //        System.out.println("Token valid: " + jwtUtil.isTokenValid(token, username));
+      } catch (ExpiredJwtException e) {
+        clearJwtCookie(response);
       }
     }
-    /// System.out.println("Context: " + SecurityContextHolder.getContext().getAuthentication());
     chain.doFilter(request, response);
   }
 }

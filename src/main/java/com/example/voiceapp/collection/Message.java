@@ -13,6 +13,7 @@ public class Message {
   @Id private String id;
   private String sender;
   private String channel;
+  private String recipient;
   private String content;
   private String attachment;
   private Date date;

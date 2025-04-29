@@ -1,71 +1,172 @@
 package com.example.voiceapp.controllers;
 
 import com.example.voiceapp.collection.Channel;
-import com.example.voiceapp.dtos.ProcessFriendRequestDTO;
-import com.example.voiceapp.dtos.PublicUserDTO;
-import com.example.voiceapp.dtos.SendRequestDTO;
-import com.example.voiceapp.dtos.UserDTO;
+import com.example.voiceapp.dtos.*;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.service.UserService.UserService;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CompletableFuture;
+
+import com.example.voiceapp.service.UserService.UserServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
 
-  @Autowired private UserService userService;
-
+  @Autowired private UserServiceImpl userService;
+  private Logger log = LoggerFactory.getLogger(UserController.class);
   @GetMapping("/getChannels")
-  public ResponseEntity<Map<String, Set<Channel>>> getChannels()
-      throws ExecutionException, InterruptedException {
-    return new ResponseEntity<>(Map.of("channels", userService.getChannels().get()), HttpStatus.OK);
+  public DeferredResult<ResponseEntity<Map<String, Set<Channel>>>> getChannels() {
+    DeferredResult<ResponseEntity<Map<String, Set<Channel>>>> output = new DeferredResult<>();
+    userService.getChannels().thenAccept(channels ->
+            output.setResult(new ResponseEntity<>(Map.of("channels", channels), HttpStatus.OK))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
   }
 
   @GetMapping("/getRequests")
-  public ResponseEntity<Map<String, Set<String>>> getRequests()
-      throws ExecutionException, InterruptedException {
-    return new ResponseEntity<>(Map.of("requests", userService.getRequests().get()), HttpStatus.OK);
+  public DeferredResult<ResponseEntity<Map<String, Set<String>>>> getRequests() {
+    DeferredResult<ResponseEntity<Map<String, Set<String>>>> output = new DeferredResult<>();
+    userService.getRequests().thenAccept(requests ->
+            output.setResult(new ResponseEntity<>(Map.of("requests", requests), HttpStatus.OK))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
   }
 
   @PostMapping("/sendRequest")
-  public ResponseEntity<Map<String, String>> sendRequest(@RequestBody SendRequestDTO requestDTO)
-      throws ExecutionException, InterruptedException {
-    return new ResponseEntity<>(userService.sendRequest(requestDTO).get(), HttpStatus.OK);
+  public DeferredResult<ResponseEntity<Map<String, String>>> sendRequest(@RequestBody SendRequestDTO requestDTO) {
+    DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
+    userService.sendRequest(requestDTO).thenAccept(response ->
+            output.setResult(new ResponseEntity<>(response, HttpStatus.OK))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
   }
 
   @PostMapping("/processRequest")
-  public ResponseEntity<Map<String, String>> processRequest(
-      @RequestBody ProcessFriendRequestDTO requestDTO)
-      throws ExecutionException, InterruptedException {
-    return new ResponseEntity<>(userService.processRequest(requestDTO).get(), HttpStatus.OK);
+  public DeferredResult<ResponseEntity<Map<String, String>>> processRequest(@RequestBody ProcessFriendRequestDTO requestDTO) {
+    DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
+    userService.processRequest(requestDTO).thenAccept(response ->
+            output.setResult(new ResponseEntity<>(response, HttpStatus.OK))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
   }
 
   @PostMapping("/upload")
   @CrossOrigin(origins = "*", allowedHeaders = "*", exposedHeaders = "Content-Disposition")
-  public ResponseEntity<Map<String, String>> upload(@RequestParam("file") MultipartFile file)
-      throws ExecutionException, InterruptedException, IOException {
-    return new ResponseEntity<>(userService.uploadProfilePicture(file).get(), HttpStatus.OK);
+  public DeferredResult<ResponseEntity<Map<String, String>>> upload(@RequestParam("file") MultipartFile file) throws IOException {
+    DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
+    userService.uploadProfilePicture(file).thenAccept(response ->
+            output.setResult(new ResponseEntity<>(response, HttpStatus.OK))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
   }
+
   @GetMapping("/info")
-  public ResponseEntity<UserDTO> getUser() throws ExecutionException, InterruptedException {
-    return new ResponseEntity<>(userService.getUser().get(),HttpStatus.OK);
+  public DeferredResult<ResponseEntity<UserDTO>> getUser() {
+    DeferredResult<ResponseEntity<UserDTO>> output = new DeferredResult<>();
+    userService.getUser().handle((userDTO, ex) -> {
+      if (!output.isSetOrExpired()) {
+        if (ex != null) {
+          String msg = ex.getCause()!=null
+                  ? ex.getCause().getMessage()
+                  : ex.getMessage();
+          output.setErrorResult(new RuntimeException(msg));
+        } else {
+          output.setResult(new ResponseEntity<>(userDTO, HttpStatus.OK));
+        }
+      }
+      return null;
+    });
+    return output;
   }
+
+
+
   @GetMapping("/info/{user}")
-  public ResponseEntity<PublicUserDTO> getUser(@PathVariable String user) throws ExecutionException, InterruptedException {
-    return new ResponseEntity<>(userService.getPublicUser(user).get(),HttpStatus.OK);
+  public DeferredResult<ResponseEntity<PublicUserDTO>> getPublicUser(@PathVariable String user) {
+    DeferredResult<ResponseEntity<PublicUserDTO>> output = new DeferredResult<>();
+    userService.getPublicUser(user).thenAccept(publicUserDTO ->
+            output.setResult(new ResponseEntity<>(publicUserDTO, HttpStatus.OK))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(null));
+      return null;
+    });
+    return output;
+  }
+
+  @PostMapping("/update/aboutme")
+  public DeferredResult<ResponseEntity<Map<String, String>>> aboutMe(@RequestBody SingleInputDTO input) {
+    DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
+    userService.updateAboutMe(input).thenAccept(response ->
+            output.setResult(new ResponseEntity<>(response, HttpStatus.OK))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
+  }
+
+  @PostMapping("/update/status")
+  public DeferredResult<ResponseEntity<Map<String, String>>> updateStatus(@RequestBody SingleInputDTO input) {
+    DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
+    userService.updateStatus(input).thenAccept(response ->
+            output.setResult(new ResponseEntity<>(response, HttpStatus.OK))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
+  }
+
+  @GetMapping("/friends")
+  public DeferredResult<ResponseEntity<Map<String, Set<String>>>> getFriends() {
+    DeferredResult<ResponseEntity<Map<String, Set<String>>>> output = new DeferredResult<>();
+    userService.getFriends().thenAccept(friends ->
+            output.setResult(new ResponseEntity<>(friends, HttpStatus.OK))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+              .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
   }
   @ExceptionHandler(AlreadyExistsException.class)
   public ResponseEntity<Map<String, String>> handleAlreadyExistsException(
-      AlreadyExistsException e) {
+          AlreadyExistsException e) {
     return new ResponseEntity<>(Map.of("Error", e.getMessage()), HttpStatus.CONFLICT);
   }
 
@@ -78,4 +179,5 @@ public class UserController {
   public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException e) {
     return new ResponseEntity<>(Map.of("Error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
   }
+
 }

@@ -1,9 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { forkJoin } from 'rxjs';
-import { UserService,Channel,UserDTO,ChannelMembership } from '../../services/user.service';
+import { UserService} from '../../services/user.service';
+import { Channel, ChannelMembership, UserDTO } from '../../models/user.model';
 import { CommonModule } from '@angular/common';
 import { ServerPopupComponent } from '../server-popup/server-popup.component';
 import { RouterModule } from '@angular/router';
+import { UserProfilePopupComponent } from '../user-profile-popup/user-profile-popup.component';
+import { MatDialog } from '@angular/material/dialog';
+
 @Component({
   selector: 'app-sidebar',
   imports: [CommonModule,ServerPopupComponent,RouterModule],
@@ -15,7 +19,8 @@ export class SidebarComponent {
   user: UserDTO | null = null;
   showCreatePopup = false;
 
-  constructor(private userService: UserService) {}
+  constructor(private userService: UserService,    private dialog: MatDialog
+  ) {}
 
   ngOnInit() {
     forkJoin({
@@ -36,7 +41,13 @@ export class SidebarComponent {
       });
     });
   }
-
+  openProfilePopup() {
+    if (!this.user) { return; }
+    this.dialog.open(UserProfilePopupComponent, {
+      data: this.user,
+      panelClass: 'custom-dialog-container'
+    });
+  }
   openCreatePopup() {
     this.showCreatePopup = true;
   }
@@ -44,5 +55,6 @@ export class SidebarComponent {
   closeCreatePopup() {
     this.showCreatePopup = false;
   }
+  
 }
 

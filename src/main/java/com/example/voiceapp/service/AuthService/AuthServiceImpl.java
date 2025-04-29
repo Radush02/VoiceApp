@@ -10,4 +10,6 @@ public interface AuthServiceImpl {
   CompletableFuture<Map<String, String>> registerUser(RegisterDTO registerDTO);
 
   CompletableFuture<String> authenticateUser(LoginDTO loginDTO);
+
+  String extractUsername();
 }
