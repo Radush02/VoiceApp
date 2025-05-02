@@ -10,4 +10,5 @@ import org.springframework.stereotype.Repository;
 public interface MessageRepository extends MongoRepository<Message, String> {
 
   List<Message> findAllByChannel(String channel, Pageable pageable);
+  List<Message> findAllBySenderAndRecipient(String sender, String recipient, Pageable pageable);
 }

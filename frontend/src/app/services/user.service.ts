@@ -2,12 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable,map } from 'rxjs';
 import { Channel } from '../models/user.model';
+import { environment } from '../environments/environment';
 @Injectable({
   providedIn: 'root'
 })
 
 export class UserService {
-  private apiLink = 'http://localhost:8080/api/user';
+  private apiLink = environment.apiUrl+'/user';
   constructor(private http: HttpClient) {}
   
   getChannels(): Observable<Channel[]> {
@@ -33,5 +34,9 @@ export class UserService {
   }
   getFriends(): Observable<any> {
     return this.http.get(`${this.apiLink}/friends`, { withCredentials: true });
+  }
+
+  areFriends(user: string): Observable<any> {
+    return this.http.get(`${this.apiLink}/friends/${user}`, { withCredentials: true });
   }
 }

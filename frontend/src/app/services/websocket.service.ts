@@ -1,14 +1,13 @@
 import { Injectable } from '@angular/core';
 import { Client, Stomp } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import { BehaviorSubject } from 'rxjs';
-
+import { environment } from '../environments/environment';
 @Injectable({
   providedIn: 'root'
 })
 export class WebsocketService {
   private stompClient!: Client;
-  private messageSubject = new BehaviorSubject<any>(null);
+  protected messageSubject = new BehaviorSubject<any>(null);
   private isConnected = false; 
   private pendingSubscriptions: string[] = []; 
 
@@ -18,7 +17,7 @@ export class WebsocketService {
 
   private connect() {
     this.stompClient = new Client({
-      brokerURL: 'ws://localhost:8080/ws',
+      brokerURL: environment.wsUrl,
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000
@@ -63,7 +62,30 @@ export class WebsocketService {
     }
   }
 
+  public sendPrivateMessage(recipient: string, message: any) {
+    console.log('Sending private message:', message);
+    if (this.stompClient && this.stompClient.connected) {
+      this.stompClient.publish({
+        destination: `/app/sendPrivateMessage/${recipient}`,
+        body: JSON.stringify(message)
+      });
+    } else {
+      console.warn('WebSocket not connected. Private message not sent:', message);
+    }
+  }
   public getMessages() {
     return this.messageSubject.asObservable();
+  }
+
+  public sendSignal(channel: string, message: any) {
+    if(this.stompClient.connected) {
+      this.stompClient.publish({
+        destination:`/app/signal/${channel}`,
+        body: JSON.stringify(message)
+      });
+    }
+  }
+  public subscribeToSignal(channel: string, callback: (msg:any)=>void) {
+    this.subscribeToChannel(`/channel/${channel}/signal`, callback);
   }
 }

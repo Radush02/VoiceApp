@@ -50,7 +50,7 @@ public class AuthService implements AuthServiceImpl {
   public CompletableFuture<String> authenticateUser(LoginDTO loginDTO) {
     User user =
         userRepository
-            .findByUsername(loginDTO.getUsername())
+            .findByUsernameIgnoreCase(loginDTO.getUsername())
             .orElseThrow(() -> new NonExistentException("Invalid credentials"));
 
     if (!passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {

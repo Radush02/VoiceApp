@@ -4,7 +4,9 @@ import { ActivatedRoute } from '@angular/router';
 import { AuthenticationService } from '../../services/authentication.service';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { WebrtcService } from '../../services/webrtc.service';
 import { ChatService } from '../../services/chat.service';
+import { SignalMessage } from '../../models/signal-message.model';
 @Component({
   selector: 'app-chat',
   templateUrl: './chat.component.html',
@@ -20,12 +22,15 @@ export class ChatComponent implements OnInit, AfterViewChecked {
   selectedImage: File | null = null;
   
   @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
-
+  @ViewChild('local')  localVideo!:  ElementRef<HTMLVideoElement>;
+  @ViewChild('remote') remoteVideo!: ElementRef<HTMLVideoElement>;
+  
   constructor(
     private websocketService: WebsocketService,
     private chatService: ChatService,
     private params: ActivatedRoute,
-    private authService: AuthenticationService
+    private authService: AuthenticationService,
+    private webrtc: WebrtcService
   ) {
     this.params.params.subscribe((params) => {
       this.channel = params['channel'];
@@ -35,11 +40,13 @@ export class ChatComponent implements OnInit, AfterViewChecked {
       this.username = username;
       console.log('Username:', this.username);
     });
+    
   }
 
   ngOnInit() {
     this.websocketService.subscribeToChannel(`/channel/${this.channel}`, (message: any) => {
       if (message) {
+        
         this.messages.push(message);
       }
     });
@@ -123,4 +130,14 @@ export class ChatComponent implements OnInit, AfterViewChecked {
     const response = await this.chatService.uploadImage(this.channel,file).toPromise();
     return response.message;
   }
+  async call() {
+    try {
+      
+      await this.webrtc.init(this.channel, this.localVideo.nativeElement, this.remoteVideo.nativeElement);
+    } catch (err:any) {
+      console.error('Could not start call:', err);
+      alert('Error starting video call: ' + err.message);
+    }
+  }
+
 }

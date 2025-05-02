@@ -43,7 +43,7 @@ public class ChannelService implements ChannelServiceImpl {
   public CompletableFuture<Map<String, String>> createChannel(ChannelDTO channel) throws IOException {
     User u =
         userRepository
-            .findByUsername(authService.extractUsername())
+            .findByUsernameIgnoreCase(authService.extractUsername())
             .orElseThrow(() -> new NonExistentException("User not found"));
     if (channelRepository.existsByName(channel.getName())) {
       throw new AlreadyExistsException(
@@ -67,12 +67,12 @@ public class ChannelService implements ChannelServiceImpl {
 
   
   @Override
-  public CompletableFuture<Map<String, String>> joinChannel(InviteDTO inviteDTO) {
+  public CompletableFuture<Map<String, String>> joinChannel(String inviteCode) {
     String currentUser = authService.extractUsername();
 
     Invite invite =
         inviteRepository
-            .findById(inviteDTO.getInviteId())
+            .findById(inviteCode)
             .orElseThrow(() -> new NonExistentException("Invite not found"));
 
     if (invite.getExpiresAt() != null && invite.getExpiresAt().before(new Date())) {
@@ -88,7 +88,7 @@ public class ChannelService implements ChannelServiceImpl {
 
     User user =
         userRepository
-            .findByUsername(currentUser)
+            .findByUsernameIgnoreCase(currentUser)
             .orElseThrow(() -> new NonExistentException("User not found"));
     Channel channel =
         channelRepository
@@ -123,7 +123,7 @@ public class ChannelService implements ChannelServiceImpl {
   public CompletableFuture<Map<String, String>> createInvite(CreateInviteDTO createInviteDTO) {
     User u =
         userRepository
-            .findByUsername(authService.extractUsername())
+            .findByUsernameIgnoreCase(authService.extractUsername())
             .orElseThrow(() -> new NonExistentException("User not found"));
     boolean isAdmin =
         u.getChannels().stream()

@@ -25,7 +25,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserController {
 
   @Autowired private UserServiceImpl userService;
-  private Logger log = LoggerFactory.getLogger(UserController.class);
   @GetMapping("/getChannels")
   public DeferredResult<ResponseEntity<Map<String, Set<Channel>>>> getChannels() {
     DeferredResult<ResponseEntity<Map<String, Set<Channel>>>> output = new DeferredResult<>();
@@ -162,6 +161,20 @@ public class UserController {
               .body(Map.of("Error", ex.getMessage())));
       return null;
     });
+    return output;
+  }
+
+  @GetMapping("/friends/{friend}")
+  public DeferredResult<ResponseEntity<Map<String, Boolean>>> areFriends(@PathVariable String friend) {
+    DeferredResult<ResponseEntity<Map<String, Boolean>>> output = new DeferredResult<>();
+    userService.areFriends(friend).thenAccept(
+            f -> output.setResult(new ResponseEntity<>(f,HttpStatus.OK))
+    ).exceptionally(
+            ex -> {
+              output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                      .body(Map.of("Error", ex.getMessage())));
+              return null;
+            });
     return output;
   }
   @ExceptionHandler(AlreadyExistsException.class)

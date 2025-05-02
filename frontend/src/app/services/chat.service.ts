@@ -1,14 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import S3 from 'aws-sdk/clients/s3';
+import { environment } from '../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChatService {
 
-  private apiLink = 'http://localhost:8080/api/messages';
+  private apiLink = environment.apiUrl+'/messages';
   constructor(private http:HttpClient) { }
 
   fetchMessages(channel: string, limit: number=50): Observable<any> {
@@ -20,5 +20,7 @@ export class ChatService {
     formData.append('file',image);
     return this.http.post(`${this.apiLink}/upload/${channel}`, formData, {withCredentials:true});
   }
-
+  fetchPrivateMessages(recipient: string, limit: number=50): Observable<any> {
+    return this.http.get(`${this.apiLink}/private/${recipient}`, {withCredentials:true});
+  }
 }

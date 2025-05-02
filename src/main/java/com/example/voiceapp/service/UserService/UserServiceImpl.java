@@ -17,7 +17,9 @@ public interface UserServiceImpl {
 
   CompletableFuture<Map<String, String>> sendRequest(SendRequestDTO requestDTO);
 
-  CompletableFuture<Map<String, String>> processRequest(ProcessFriendRequestDTO username);
+    CompletableFuture<Map<String,Boolean>> areFriends(String friend);
+
+    CompletableFuture<Map<String, String>> processRequest(ProcessFriendRequestDTO username);
 
   CompletableFuture<UserDTO> getUser();
 

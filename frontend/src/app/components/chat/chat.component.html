@@ -13,7 +13,12 @@
       </div>
     </div>
   </div>
-  
+  <div class="videos">
+    <video #local muted autoplay playsinline style="width:200px; height:200px"></video>
+    <video #remote autoplay playsinline style="width:200px; height:200px"></video>
+  </div>
+
+<button (click)="call()">Call</button>
   <div class="input-container">
     <input [(ngModel)]="messageContent" placeholder="Type a message..." (keyup.enter)="sendMessage()" />
     

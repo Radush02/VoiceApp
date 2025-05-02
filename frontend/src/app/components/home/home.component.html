@@ -1,9 +1,9 @@
 <div class="channel-list">
-    <h2>Your Channels</h2>
+    <h2>Your Friends</h2>
     <ul>
-      <li *ngFor="let channel of channels">
-        <a [routerLink]="['/chat', channel.vanityId]">
-          {{ channel.name }}
+      <li *ngFor="let friend of friends">
+        <a [routerLink]="['/private', friend]">
+          {{ friend }}
         </a>
       </li>
     </ul>

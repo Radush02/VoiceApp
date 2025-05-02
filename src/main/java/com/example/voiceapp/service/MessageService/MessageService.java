@@ -13,10 +13,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+
+import com.example.voiceapp.service.S3Service.S3Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import static java.util.concurrent.CompletableFuture.supplyAsync;
@@ -54,7 +57,7 @@ public class MessageService implements MessageServiceImpl {
         throw new NonExistentException("Recipient does not exist");
       }
 
-      User senderUser = userRepository.findByUsername(sender)
+      User senderUser = userRepository.findByUsernameIgnoreCase(sender)
               .orElseThrow(() -> new NonExistentException("Sender not found"));
 
       if (!senderUser.getFriends().contains(recipient)) {
@@ -80,6 +83,27 @@ public class MessageService implements MessageServiceImpl {
       return messageRepository.findAllByChannel(channel, pageable).stream()
               .sorted(Comparator.comparing(Message::getDate))
               .collect(Collectors.toList());
+    });
+  }
+
+  @Override
+  public CompletableFuture<List<Message>> fetchMessageByDM(String sender, String recipient, Integer limit){
+    return supplyAsync(() -> {
+      System.out.println(recipient);
+      if (!userRepository.existsByUsername(recipient)) {
+        throw new NonExistentException("Recipient does not exist");
+      }
+
+      User senderUser = userRepository.findByUsernameIgnoreCase(sender)
+              .orElseThrow(() -> new NonExistentException("Sender not found"));
+
+      if (!senderUser.getFriends().contains(recipient)) {
+        throw new NotPermittedException("Cannot send DM to non-friend.");
+      }
+
+      Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "date"));
+
+      return messageRepository.findAllBySenderAndRecipient(sender, recipient, pageable).stream().sorted(Comparator.comparing(Message::getDate)).collect(Collectors.toList());
     });
   }
 }

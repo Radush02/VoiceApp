@@ -14,18 +14,15 @@ export class HomeComponent {
 
   constructor(private router: Router, private userService: UserService,private authService:AuthenticationService) {
 
-    this.getChannels();
+    this.getFriends();
   }
-  channels: any[] = [];
-  getChannels(){
-    this.userService.getChannels().subscribe(
-      (response: any) => {
-        this.channels = response.channels;
-        console.log(response);
-      },
-      (error) => {
-        console.error('Error fetching channels:', error);
-      }
-    );
+  friends: any[] = [];
+  getFriends() {
+    this.userService.getFriends().subscribe((response: any) => {
+      this.friends = response.Friends;
+      console.log('Friends:', this.friends);
+    }, (error: any) => {
+      console.error('Error fetching friends:', error);
+    });
   }
 }

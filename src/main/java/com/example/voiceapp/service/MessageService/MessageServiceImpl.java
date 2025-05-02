@@ -17,4 +17,5 @@ public interface MessageServiceImpl {
 
   CompletableFuture<List<Message>> fetchMessagesByChannel(String channel, Integer limit);
 
+  CompletableFuture<List<Message>> fetchMessageByDM(String sender, String recipient, Integer limit);
 }

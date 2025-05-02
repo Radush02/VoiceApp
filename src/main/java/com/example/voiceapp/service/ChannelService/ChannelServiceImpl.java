@@ -14,5 +14,5 @@ public interface ChannelServiceImpl {
 
   CompletableFuture<Map<String, String>> createInvite(CreateInviteDTO createInviteDTO);
 
-  CompletableFuture<Map<String, String>> joinChannel(InviteDTO inviteDTO);
+  CompletableFuture<Map<String, String>> joinChannel(String inviteCode);
 }

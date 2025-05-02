@@ -51,11 +51,11 @@ public class ChannelController {
     return output;
   }
 
-  @PostMapping("/join")
+  @PostMapping("/join/{invite}")
   @ResponseStatus(HttpStatus.CREATED)
-  public DeferredResult<ResponseEntity<Map<String, String>>> joinChannel(@RequestBody InviteDTO inviteDTO) {
+  public DeferredResult<ResponseEntity<Map<String, String>>> joinChannel(@PathVariable String invite) {
     DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
-    channelService.joinChannel(inviteDTO).thenAccept(result ->
+    channelService.joinChannel(invite).thenAccept(result ->
             output.setResult(new ResponseEntity<>(result, HttpStatus.CREATED))
     ).exceptionally(ex -> {
       output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

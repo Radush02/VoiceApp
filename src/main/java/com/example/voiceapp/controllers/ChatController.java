@@ -1,18 +1,16 @@
 package com.example.voiceapp.controllers;
 
-import com.example.voiceapp.collection.Channel;
+
 import com.example.voiceapp.collection.Message;
-import com.example.voiceapp.collection.User;
+
+import com.example.voiceapp.dtos.SignalMessageDTO;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.exceptions.NotPermittedException;
-import com.example.voiceapp.repository.ChannelRepository;
-import com.example.voiceapp.repository.UserRepository;
-import com.example.voiceapp.service.MessageService.MessageService;
+
 
 import java.security.Principal;
 import java.util.Map;
-import java.util.Objects;
 
 import com.example.voiceapp.service.MessageService.MessageServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -39,7 +35,12 @@ public class ChatController {
       throw new NotPermittedException("Unauthorized");
     }
     String username = principal.getName();
-    messageService.processChannelMessage(username, channel, message);
+    messageService
+            .processChannelMessage(username, channel, message)
+            .thenAccept(savedMessage -> {
+              messagingTemplate
+                      .convertAndSend("/channel/" + channel, savedMessage);
+            });
   }
 
 
@@ -53,6 +54,18 @@ public class ChatController {
     messageService.processDirectMessage(principal.getName(), recipient, message);
     messagingTemplate.convertAndSendToUser(recipient, "/queue/messages", message);
   }
+
+  @MessageMapping("/signal/{channel}")
+  public void signal(@DestinationVariable String channel,
+                     @Payload SignalMessageDTO msg,
+                     Principal principal) {
+    msg.setFrom(principal.getName());
+    messagingTemplate.convertAndSend(
+            "/channel/"+channel+"/signal",
+            msg
+    );
+  }
+
   @ExceptionHandler(AlreadyExistsException.class)
   public ResponseEntity<Map<String, String>> handleAlreadyExistsException(
       AlreadyExistsException e) {
