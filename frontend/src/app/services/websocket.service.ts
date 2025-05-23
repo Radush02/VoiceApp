@@ -8,14 +8,15 @@ import { environment } from '../environments/environment';
 export class WebsocketService {
   private stompClient!: Client;
   protected messageSubject = new BehaviorSubject<any>(null);
-  private isConnected = false; 
-  private pendingSubscriptions: string[] = []; 
+  private isConnected = false;
+  private pendingSubscriptions: string[] = [];
+  private onConnectCallbacks: (() => void)[] = [];
 
   constructor() {
     this.connect();
   }
 
-  private connect() {
+  public connect() {
     this.stompClient = new Client({
       brokerURL: environment.wsUrl,
       reconnectDelay: 5000,
@@ -24,10 +25,13 @@ export class WebsocketService {
     });
 
     this.stompClient.onConnect = () => {
-      console.log('Connected to WebSocket');
       this.isConnected = true;
-      this.pendingSubscriptions.forEach(channel => this.subscribeToChannel(channel, () => {}));
+      this.pendingSubscriptions.forEach(channel =>
+        this.subscribeToChannel(channel, () => {})
+      );
       this.pendingSubscriptions = [];
+
+      this.onConnectCallbacks.forEach(cb => cb());
     };
 
     this.stompClient.onWebSocketError = (error) => {
@@ -38,15 +42,32 @@ export class WebsocketService {
     this.stompClient.activate();
   }
 
+  public onConnect(callback: () => void): void {
+    if (this.isConnected) {
+      callback();
+    } else {
+      this.onConnectCallbacks.push(callback);
+    }
+  }
+
+  public subscribe(topic: string, callback: (data: any) => void): void {
+    this.onConnect(() => {
+      this.stompClient.subscribe(topic, message => {
+        callback(JSON.parse(message.body));
+      });
+    });
+  }
+
   public subscribeToChannel(channel: string, callback: (message: any) => void) {
-    if (this.stompClient && this.stompClient.connected) {
+    this.onConnect(() => {
       this.stompClient.subscribe(channel, (message) => {
         const parsedMessage = JSON.parse(message.body);
         this.messageSubject.next(parsedMessage);
         callback(parsedMessage);
       });
-    } else {
-      console.warn('WebSocket not connected yet. Queuing subscription for:', channel);
+    });
+
+    if (!this.isConnected) {
       this.pendingSubscriptions.push(channel);
     }
   }
@@ -88,4 +109,22 @@ export class WebsocketService {
   public subscribeToSignal(channel: string, callback: (msg:any)=>void) {
     this.subscribeToChannel(`/channel/${channel}/signal`, callback);
   }
+
+    public sendTyping(channel: string) {
+    if (this.stompClient && this.stompClient.connected) {
+      this.stompClient.publish({
+        destination: `/app/typing/${channel}`,
+        body: '' 
+      });
+    }
+  }
+
+  public subscribeToTyping(channel: string, callback: (user: string) => void) {
+    this.subscribe(`/channel/${channel}/typing`, (msg) => {
+        console.log('Typing received:', msg);
+
+      callback(msg.from);
+    });
+  }
+
 }

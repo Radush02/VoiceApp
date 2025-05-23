@@ -4,6 +4,8 @@ import com.example.voiceapp.collection.Channel;
 import com.example.voiceapp.dtos.*;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
+import com.example.voiceapp.service.ChannelService.ChannelServiceImpl;
+import com.example.voiceapp.service.PresenceService.PresenceServiceImpl;
 import com.example.voiceapp.service.UserService.UserService;
 import java.io.IOException;
 import java.util.Map;
@@ -25,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserController {
 
   @Autowired private UserServiceImpl userService;
+  @Autowired private PresenceServiceImpl presenceService;
   @GetMapping("/getChannels")
   public DeferredResult<ResponseEntity<Map<String, Set<Channel>>>> getChannels() {
     DeferredResult<ResponseEntity<Map<String, Set<Channel>>>> output = new DeferredResult<>();
@@ -146,6 +149,17 @@ public class UserController {
     ).exceptionally(ex -> {
       output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
               .body(Map.of("Error", ex.getMessage())));
+      return null;
+    });
+    return output;
+  }
+  @GetMapping("/presence")
+  public DeferredResult<ResponseEntity<Map<String, Boolean>>> getPresence() {
+    DeferredResult<ResponseEntity<Map<String, Boolean>>> output = new DeferredResult<>();
+    presenceService.getPresenceMap().thenAccept(map ->
+            output.setResult(new ResponseEntity<>(map, HttpStatus.OK))
+    ).exceptionally(ex -> {
+      output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
       return null;
     });
     return output;

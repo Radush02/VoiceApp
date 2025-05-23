@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable,map } from 'rxjs';
 import { Channel } from '../models/user.model';
 import { environment } from '../environments/environment';
+import { RequestResponse } from '../enums/RequestResponse';
 @Injectable({
   providedIn: 'root'
 })
@@ -39,4 +40,11 @@ export class UserService {
   areFriends(user: string): Observable<any> {
     return this.http.get(`${this.apiLink}/friends/${user}`, { withCredentials: true });
   }
+  getPendingRequests(): Observable<string[]> {
+  return this.http.get<string[]>('/api/user/getRequests');
+}
+
+processFriendRequest(data: { username: string; response: RequestResponse }): Observable<void> {
+  return this.http.post<void>('/api/user/processRequest', data);
+}
 }

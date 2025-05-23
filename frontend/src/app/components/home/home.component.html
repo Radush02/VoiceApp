@@ -3,7 +3,8 @@
     <ul>
       <li *ngFor="let friend of friends">
         <a [routerLink]="['/private', friend]">
-          {{ friend }}
+          <span>{{ friend }}</span>
+          <span *ngIf="isOnline(friend)" class="online-indicator">●</span>
         </a>
       </li>
     </ul>

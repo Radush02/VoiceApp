@@ -15,6 +15,11 @@ h2 {
   background-color: #f5f5f5;
   border-bottom: 1px solid #e0e0e0;
 }
+.typing-indicator {
+  font-style: italic;
+  color: gray;
+  margin-left: 10px;
+}
 
 .messages-container {
   flex: 1;

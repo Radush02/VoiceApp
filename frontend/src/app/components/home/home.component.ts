@@ -4,6 +4,9 @@ import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { UserService } from '../../services/user.service';
 import { AuthenticationService } from '../../services/authentication.service';
+import { PresenceService } from '../../services/presence.service';
+import { ChangeDetectorRef } from '@angular/core';
+
 @Component({
   selector: 'app-home',
   imports: [CommonModule,RouterModule],
@@ -11,10 +14,16 @@ import { AuthenticationService } from '../../services/authentication.service';
   styleUrl: './home.component.css'
 })
 export class HomeComponent {
-
-  constructor(private router: Router, private userService: UserService,private authService:AuthenticationService) {
+  onlineUsers: { [username: string]: boolean } = {};
+  constructor(private router: Router, private userService: UserService,private authService:AuthenticationService,private presenceService: PresenceService,private cd: ChangeDetectorRef) {
 
     this.getFriends();
+  }
+  ngAfterViewInit() {
+        this.presenceService.presence$.subscribe(data => {
+      this.onlineUsers = data;
+      this.cd.detectChanges();
+    });
   }
   friends: any[] = [];
   getFriends() {
@@ -25,4 +34,9 @@ export class HomeComponent {
       console.error('Error fetching friends:', error);
     });
   }
+    isOnline(username: string): boolean {
+      return this.onlineUsers[username] === true;
+    }
+
+
 }

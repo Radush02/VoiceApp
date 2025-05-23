@@ -48,7 +48,14 @@
       </p>
       </ng-container> 
   </mat-card-content>
-
+<div *ngIf="isSelf() && requestsCount !== null" class="pending-requests">
+  <h3>Pending Friend Requests ({{ requestsCount }})</h3>
+  <div *ngFor="let request of pendingRequests" class="request-item">
+    <span>{{ request }}</span>
+<button mat-button color="primary" (click)="processRequest(request, RequestResponse.ACCEPTED)">Accept</button>
+<button mat-button color="warn" (click)="processRequest(request, RequestResponse.REJECTED)">Reject</button>
+  </div>
+</div>
   <mat-card-actions align="end">
     <button mat-button (click)="close()">Close</button>
   </mat-card-actions>

@@ -37,7 +37,7 @@ public class ChannelController {
     return output;
   }
 
-  @PostMapping("/createInvite")
+  @PostMapping("/create-invite")
   @ResponseStatus(HttpStatus.CREATED)
   public DeferredResult<ResponseEntity<Map<String, String>>> createInvite(@RequestBody CreateInviteDTO createInviteDTO) {
     DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();

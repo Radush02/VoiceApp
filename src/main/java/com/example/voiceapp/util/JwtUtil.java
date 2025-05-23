@@ -29,6 +29,15 @@ public class JwtUtil {
             SignatureAlgorithm.HS256)
         .compact();
   }
+  public String generateRefreshToken(String username) {
+    Instant now = Instant.now();
+    return Jwts.builder()
+            .claim("sub", username)
+            .issuedAt(Date.from(now))
+            .expiration(Date.from(now.plus(30, ChronoUnit.DAYS)))
+            .signWith(Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
+            .compact();
+  }
 
   public String extractUsername(String token) {
     return extractClaim(token, Claims::getSubject);

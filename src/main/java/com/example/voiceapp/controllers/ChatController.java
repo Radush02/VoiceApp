@@ -43,6 +43,22 @@ public class ChatController {
             });
   }
 
+  @MessageMapping("/typing/{channel}")
+  public void typing(@DestinationVariable String channel, Principal principal) {
+    if (principal != null) {
+      String username = principal.getName();
+      System.out.println("Typing event from: " + username + " in channel: " + channel);
+
+      messagingTemplate.convertAndSend("/channel/" + channel + "/typing", Map.of("from", username));
+    }
+  }
+  @MessageMapping("/typingPrivate/{recipient}")
+  public void typingPrivate(@DestinationVariable String recipient, Principal principal) {
+    if (principal != null) {
+      String username = principal.getName();
+      messagingTemplate.convertAndSendToUser(recipient, "/queue/typing", Map.of("from", username));
+    }
+  }
 
   @MessageMapping("/sendPrivateMessage/{recipient}")
   public void sendPrivateMessage(@DestinationVariable String recipient,

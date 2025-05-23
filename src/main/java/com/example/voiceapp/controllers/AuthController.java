@@ -4,8 +4,11 @@ import com.example.voiceapp.dtos.LoginDTO;
 import com.example.voiceapp.dtos.RegisterDTO;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
+import com.example.voiceapp.repository.UserRepository;
 import com.example.voiceapp.service.AuthService.AuthService;
 import com.example.voiceapp.service.AuthService.AuthServiceImpl;
+import com.example.voiceapp.util.JwtUtil;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -24,6 +27,7 @@ import org.springframework.web.context.request.async.DeferredResult;
 public class AuthController {
 
   @Autowired private AuthServiceImpl authService;
+  @Autowired private JwtUtil jwtUtil;
 
   @PostMapping("/register")
   public DeferredResult<ResponseEntity<Map<String, String>>> register(@RequestBody RegisterDTO registerDTO) {
@@ -41,23 +45,71 @@ public class AuthController {
   @PostMapping("/login")
   public DeferredResult<ResponseEntity<Map<String, String>>> login(@RequestBody LoginDTO loginDTO, HttpServletResponse response) {
     DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
-    authService.authenticateUser(loginDTO).thenAccept(token -> {
-      ResponseCookie jwtCookie = ResponseCookie.from("jwt", token)
+
+    authService.authenticateUser(loginDTO).thenAccept(tokens -> {
+      String accessToken = tokens.get("access");
+      String refreshToken = tokens.get("refresh");
+
+      ResponseCookie jwtCookie = ResponseCookie.from("jwt", accessToken)
               .httpOnly(true)
               .secure(false)
               .path("/")
-              .maxAge(60 * 60 * 24)
+              .maxAge(60 * 60)
               .sameSite("Strict")
               .build();
+
+      ResponseCookie refreshCookie = ResponseCookie.from("refresh", refreshToken)
+              .httpOnly(true)
+              .secure(false)
+              .path("/api/auth/refresh")
+              .maxAge(60L * 60L * 24L * 30L)
+              .sameSite("Strict")
+              .build();
+
       response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
+      response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
       output.setResult(ResponseEntity.ok(Map.of("response", "Login successful")));
     }).exceptionally(ex -> {
       output.setErrorResult(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
               .body(Map.of("Error", ex.getMessage())));
       return null;
     });
+
     return output;
   }
+
+  @PostMapping("/refresh")
+  public ResponseEntity<Map<String, String>> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+    String refreshToken = null;
+
+    if (request.getCookies() != null) {
+      for (Cookie cookie : request.getCookies()) {
+        if ("refresh".equals(cookie.getName())) {
+          refreshToken = cookie.getValue();
+          break;
+        }
+      }
+    }
+    if (refreshToken == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("Error", "Refresh token is missing"));
+    }
+    String username = jwtUtil.extractUsername(refreshToken);
+    String newAccessToken = jwtUtil.generateToken(username);
+
+    ResponseCookie jwtCookie = ResponseCookie.from("jwt", newAccessToken)
+              .httpOnly(true)
+              .secure(false)
+              .path("/")
+              .maxAge(60 * 60)
+              .sameSite("Strict")
+              .build();
+
+      response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
+
+      return ResponseEntity.ok(Map.of("access", newAccessToken));
+    }
+
 
   @PostMapping("/logout")
   public ResponseEntity<?> logout(HttpServletResponse response) {

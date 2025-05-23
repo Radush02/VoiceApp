@@ -6,6 +6,7 @@ import { MatCardModule }        from '@angular/material/card';
 import { MatButtonModule }      from '@angular/material/button';
 import { UserService } from '../../services/user.service';
 import { MatIcon } from '@angular/material/icon';
+import { RequestResponse } from '../../enums/RequestResponse';
 @Component({
   selector: 'app-user-profile-popup',
   templateUrl: './user-profile-popup.component.html',
@@ -23,6 +24,9 @@ export class UserProfilePopupComponent {
   channelsCount: number | null = null;
   requestsCount: number | null = null;
   selectedImage: File | null = null;
+  pendingRequests: string[] = [];
+  RequestResponse = RequestResponse;
+
   constructor(
     private dialogRef: MatDialogRef<UserProfilePopupComponent>,
     @Inject(MAT_DIALOG_DATA) public user: UserDTO | PublicUserDTO,
@@ -31,6 +35,8 @@ export class UserProfilePopupComponent {
     if (this.isSelf()) {
       this.channelsCount = (this.user as UserDTO).channels.length;
       this.requestsCount = (this.user as UserDTO).requests.length;
+      this.fetchPendingRequests();
+
     }
   }
 
@@ -64,6 +70,30 @@ export class UserProfilePopupComponent {
         console.error('Error updating profile picture:', error);
       }
     );
+
+    
   }
-  
+    fetchPendingRequests() {
+    this.userService.getPendingRequests().subscribe(
+      (requests) => {
+        this.pendingRequests = requests;
+      },
+      (error) => {
+        console.error('Error fetching pending requests:', error);
+      }
+    );
+  }
+
+  processRequest(username: string, response: RequestResponse) {
+    this.userService.processFriendRequest({ username, response }).subscribe(
+      () => {
+        console.log(`Request ${response.toLowerCase()} successfully for ${username}`);
+        this.pendingRequests = this.pendingRequests.filter((req) => req !== username);
+        this.requestsCount = this.pendingRequests.length;
+      },
+      (error) => {
+        console.error('Error processing request:', error);
+      }
+    );
+  }
 }

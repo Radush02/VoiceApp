@@ -1,5 +1,7 @@
 package com.example.voiceapp.service.UserService;
 import java.util.stream.Collectors;
+
+import com.example.voiceapp.Enum.NotificationType;
 import com.example.voiceapp.Enum.RequestResponse;
 import com.example.voiceapp.collection.Channel;
 import com.example.voiceapp.collection.ChannelMembership;
@@ -19,6 +21,7 @@ import java.util.concurrent.Executor;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -30,6 +33,7 @@ public class UserService implements UserServiceImpl {
   @Autowired private UserRepository userRepository;
   @Autowired private ChannelRepository channelRepository;
   @Autowired private S3Service s3Service;
+  @Autowired private SimpMessagingTemplate messagingTemplate;
 
     @Qualifier("taskExecutor")
     @Autowired private Executor taskExecutor;
@@ -90,6 +94,12 @@ public class UserService implements UserServiceImpl {
     invitedUser.getRequests().add(user.getUsername());
     userRepository.save(invitedUser);
 
+    messagingTemplate.convertAndSendToUser(
+            invitedUser.getUsername(), "/queue/friend-requests",
+            Map.of("from", user.getUsername())
+    );
+    NotificationDTO notif=new NotificationDTO(NotificationType.FRIEND_REQUEST,"Friend request from "+user.getUsername());
+    messagingTemplate.convertAndSendToUser(invitedUser.getUsername(), "/queue/friend-requests", notif);
     return CompletableFuture.completedFuture(Map.of("Response", "Friend request sent!"));
   }
   @Override
@@ -128,7 +138,8 @@ public class UserService implements UserServiceImpl {
 
     userRepository.save(user);
     userRepository.save(invitedUser);
-
+    NotificationDTO notif=new NotificationDTO(NotificationType.FRIEND_REQUEST,"Friend request from "+invitedUser.getUsername()+" accepted");
+    messagingTemplate.convertAndSendToUser(user.getUsername(), "/queue/friend-requests", notif);
     return CompletableFuture.completedFuture(Map.of("Response", "Accepted"));
   }
 

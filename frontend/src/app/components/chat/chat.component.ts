@@ -20,7 +20,11 @@ export class ChatComponent implements OnInit, AfterViewChecked {
   username: string = '';
   channel: string = '';
   selectedImage: File | null = null;
-  
+  typingUsers = new Set<string>();
+  typingTimeouts = new Map<string, any>();
+  lastTypingTime = 0;
+  typingCooldown = 2000; 
+
   @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
   @ViewChild('local')  localVideo!:  ElementRef<HTMLVideoElement>;
   @ViewChild('remote') remoteVideo!: ElementRef<HTMLVideoElement>;
@@ -63,6 +67,22 @@ export class ChatComponent implements OnInit, AfterViewChecked {
         this.messages.push(message);
       }
     });
+  this.websocketService.subscribeToTyping(this.channel, (user) => {
+    if (user !== this.username) {
+      this.typingUsers.add(user);
+      if (this.typingTimeouts.has(user)) {
+        clearTimeout(this.typingTimeouts.get(user));
+      }
+
+      const timeout = setTimeout(() => {
+        this.typingUsers.delete(user);
+        this.typingTimeouts.delete(user);
+      }, 3000);
+
+      this.typingTimeouts.set(user, timeout);
+    }
+  });
+
   }
 
   ngAfterViewChecked() {
@@ -125,7 +145,17 @@ export class ChatComponent implements OnInit, AfterViewChecked {
     this.messageContent = '';
     this.removeSelectedImage();
   }
-
+  sendTyping(channelId: string) {
+    this.websocketService.sendTyping(channelId);
+  }
+onTyping(): void {
+  const now = Date.now();
+  console.log('Typing event triggered:', now);
+  if (now - this.lastTypingTime > this.typingCooldown) {
+    this.sendTyping(this.channel);
+    this.lastTypingTime = now;
+  }
+}
   async uploadImage(file: File): Promise<string> {
     const response = await this.chatService.uploadImage(this.channel,file).toPromise();
     return response.message;
@@ -139,5 +169,7 @@ export class ChatComponent implements OnInit, AfterViewChecked {
       alert('Error starting video call: ' + err.message);
     }
   }
-
+  getTypingUsers(): string {
+    return Array.from(this.typingUsers).join(', ');
+  }
 }

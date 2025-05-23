@@ -14,4 +14,12 @@ export class ChannelService {
   createChannel(name: string, vanityId: string, photo?: File): Observable<any> {
     return this.http.post(`${this.apiLink}/create`, { name, vanityId, photo });
   }
+
+  createInviteLink(vanityId:string,maxUses:number,expriesInMinutes:number): Observable<any> {
+    return this.http.post(`${this.apiLink}/create-invite`, { vanityId, maxUses, expriesInMinutes });
+  }
+
+  joinChannel(vanityId: string): Observable<any> {
+    return this.http.post(`${this.apiLink}/join/${vanityId}`, {});
+  }
 }

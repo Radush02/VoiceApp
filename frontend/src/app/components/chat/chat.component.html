@@ -1,5 +1,13 @@
 <div class="chat-container">
   <h2>Chat in {{ channel }}</h2>
+      <div *ngIf="typingUsers.size > 0" class="typing-indicator">
+  <ng-container *ngIf="typingUsers.size === 1">
+    {{ typingUsers.values().next().value }} is typing...
+  </ng-container>
+<ng-container *ngIf="typingUsers.size > 1">
+  {{ getTypingUsers() }} are typing...
+</ng-container>
+</div>
   <div class="messages-container">
     <div *ngFor="let message of messages" 
          [ngClass]="{'message-right': message.sender === username, 'message-left': message.sender !== username}"
@@ -20,7 +28,12 @@
 
 <button (click)="call()">Call</button>
   <div class="input-container">
-    <input [(ngModel)]="messageContent" placeholder="Type a message..." (keyup.enter)="sendMessage()" />
+<input
+  [(ngModel)]="messageContent"
+  placeholder="Type a message..."
+  (keyup.enter)="sendMessage()"
+  (input)="onTyping()"
+/>
     
     <div class="upload-container">
       <label for="imageUpload" class="upload-button">
@@ -34,5 +47,8 @@
     </div>
     
     <button (click)="sendMessage()" [disabled]="!messageContent && !selectedImage">Send</button>
+
+
+
   </div>
 </div>
