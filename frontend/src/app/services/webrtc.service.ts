@@ -1,140 +1,320 @@
 import { Injectable } from '@angular/core';
 import { WebsocketService } from './websocket.service';
-import { AuthenticationService } from './authentication.service';
-import { BehaviorSubject } from 'rxjs';
 import { SignalMessage } from '../models/signal-message.model';
+import { AuthenticationService } from './authentication.service';
+
 @Injectable({ providedIn: 'root' })
 export class WebrtcService {
-  private selfId!: string;
-  private pcs = new Map<string, RTCPeerConnection>();
-  private pendingCandidates = new Map<string, RTCIceCandidateInit[]>();
-  private localStream!: MediaStream;
-  private channel!: string;
-  private localVideoEl!: HTMLVideoElement;
-  private remoteVideoEl!: HTMLVideoElement;
+  private channelId = '';
+  private userId = '';
+  private localStream: MediaStream | null = null;
+  private screenStream: MediaStream | null = null;
+  private peers = new Map<string, { pc: RTCPeerConnection; pendingCandidates: RTCIceCandidateInit[] }>();
+  public localVideoEl!: HTMLVideoElement;
+  public onRemoteStream!: (peerId: string, stream: MediaStream) => void;
+  private readonly rtcConfig: RTCConfiguration = {
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+  };
 
   constructor(
     private ws: WebsocketService,
     private auth: AuthenticationService
   ) {
-    this.auth.getUsername().subscribe(name => {
-      this.selfId = name;
-    });
+    this.auth.getUsername().subscribe(id => this.userId = id);
   }
-  public cameraOn = new BehaviorSubject<boolean>(false);
-  public micOn    = new BehaviorSubject<boolean>(true);
-  public async init(
+
+public async init(
     channel: string,
-    localVid: HTMLVideoElement,
-    remoteVid: HTMLVideoElement
+    localVideo: HTMLVideoElement,
+    onRemoteStream: (peerId: string, stream: MediaStream) => void
   ): Promise<void> {
-    this.channel = channel;
-    this.localVideoEl = localVid;
-    this.remoteVideoEl = remoteVid;
-    this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    this.localStream.getVideoTracks().forEach(t => t.enabled = false);
-    this.cameraOn.next(false);
+    this.channelId = channel;
+    this.localVideoEl = localVideo;
+    this.onRemoteStream = onRemoteStream;
+    this.localVideoEl.muted = true;
 
-    this.localStream.getAudioTracks().forEach(t => t.enabled = true);
-    this.micOn.next(true);
-    this.localVideoEl.srcObject = this.localStream;
-    this.ws.subscribeToSignal(channel, (msg: SignalMessage) => this.onSignal(msg));
-    this.ws.sendSignal(channel, { type: 'join', from: this.selfId, payload: null });
-  }
+    return new Promise<void>((resolve, reject) => {
+      this.ws.onConnect(async () => {
+        this.ws.subscribeToChannel(
+          `/channel/${this.channelId}/signal`,
+          (msg: SignalMessage & { from: string; to?: string }) => this.handleSignal(msg)
+        );
 
-  private async onSignal(msg: SignalMessage) {
-    const { type, from, payload } = msg;
-    if (from === this.selfId) return;
-
-    let pc = this.pcs.get(from);
-    if (!pc) {
-      pc = this.createPeerConnection(from);
-      this.pcs.set(from, pc);
-      this.localStream.getTracks().forEach(track => pc!.addTrack(track, this.localStream));
-    }
-
-    switch (type) {
-      case 'join':
-        if (this.selfId.localeCompare(from) < 0) {
-          await this.createOffer(from);
+        try {
+          this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          this.localVideoEl.srcObject = this.localStream;
+          this.sendSignal({ type: 'join', from: this.userId, payload: null });
+          resolve();
+        } catch (err) {
+          console.error(err);
+          reject(err);
         }
-        break;
-
-      case 'offer':
-        await pc.setRemoteDescription(new RTCSessionDescription(payload));
-        await this.flushPendingCandidates(from);
-
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        this.ws.sendSignal(this.channel, { type: 'answer', from: this.selfId, payload: answer });
-        break;
-
-      case 'answer':
-        if (pc.signalingState === 'have-local-offer') {
-          await pc.setRemoteDescription(new RTCSessionDescription(payload));
-          await this.flushPendingCandidates(from);
-        }
-        break;
-
-      case 'candidate':
-        if (pc.remoteDescription && pc.remoteDescription.type) {
-          await pc.addIceCandidate(new RTCIceCandidate(payload));
-        } else {
-          const queue = this.pendingCandidates.get(from) || [];
-          queue.push(payload);
-          this.pendingCandidates.set(from, queue);
-        }
-        break;
-    }
-  }
-
-  private createPeerConnection(peerId: string): RTCPeerConnection {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
     });
+  }
+public async initAsInitiator(
+  channel: string,
+  localVideo: HTMLVideoElement,
+  onRemoteStream: (peerId: string, stream: MediaStream) => void
+): Promise<void> {
+  this.channelId = channel;
+  this.localVideoEl = localVideo;
+  this.onRemoteStream = onRemoteStream;
+  this.localVideoEl.muted = true;
 
-    pc.onicecandidate = evt => {
-      if (evt.candidate) {
-        this.ws.sendSignal(this.channel, {
-          type: 'candidate',
-          from: this.selfId,
-          payload: evt.candidate.toJSON()
-        });
+  return new Promise<void>((resolve, reject) => {
+    this.ws.onConnect(async () => {
+            this.ws.subscribeToChannel(
+        `/channel/${this.channelId}/signal`,
+        (msg: any) => this.handleSignal(msg)
+      );
+
+      try {
+        this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        this.localVideoEl.srcObject = this.localStream!;
+                this.sendSignal({ type: 'join', from: this.userId, payload: null });
+        resolve();
+      } catch (err) {
+        console.error('>>> [WebrtcService] initAsInitiator: getUserMedia failed', err);
+        reject(err);
       }
-    };
+    });
+  });
+}
 
-    pc.ontrack = evt => {
-      this.remoteVideoEl.srcObject = evt.streams[0];
-    };
 
-    return pc;
+  public async initAsJoiner(
+  channel: string,
+  localVideo: HTMLVideoElement,
+  onRemoteStream: (peerId: string, stream: MediaStream) => void
+): Promise<void> {
+  this.channelId = channel;
+  this.localVideoEl = localVideo;
+  this.onRemoteStream = onRemoteStream;
+  this.localVideoEl.muted = true;
+
+  return new Promise<void>((resolve, reject) => {
+    this.ws.onConnect(async () => {
+            this.ws.subscribeToChannel(
+        `/channel/${this.channelId}/signal`,
+        (msg: any) => this.handleSignal(msg)
+      );
+
+      try {
+        this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        this.localVideoEl.srcObject = this.localStream!;
+                this.sendSignal({ type: 'join', from: this.userId, payload: null });
+        resolve();
+      } catch (err) {
+        console.error('>>> [WebrtcService] initAsJoiner: getUserMedia failed', err);
+        reject(err);
+      }
+    });
+  });
+}
+
+
+
+  private async handleSignal(msg: SignalMessage & { from: string; to?: string }) {
+    const { type, from, to, payload } = msg;
+  if (from === this.userId) {
+    return;
+  }
+  if (to && to !== this.userId) {
+    return;
   }
 
-  private async createOffer(peerId: string) {
-    const pc = this.pcs.get(peerId)!;
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    this.ws.sendSignal(this.channel, { type: 'offer', from: this.selfId, payload: offer });
-  }
+  switch (type) {
+    case 'join':
+            if (!this.peers.has(from)) {
+        await this.createPeerConnection(from,  true);
+      }
+      break;
 
-  private async flushPendingCandidates(from: string) {
-    const pc = this.pcs.get(from)!;
-    const queued = this.pendingCandidates.get(from) || [];
-    for (const c of queued) {
-      await pc.addIceCandidate(new RTCIceCandidate(c));
+    case 'offer':
+            await this.setupIncomingConnection(from, payload as RTCSessionDescriptionInit);
+      break;
+
+    case 'answer':
+            await this.setRemoteDescription(from, payload as RTCSessionDescriptionInit);
+      break;
+
+    case 'candidate':
+            this.handleIceCandidate(from, payload as RTCIceCandidateInit);
+      break;
+
+    case 'leave':
+      this.removePeer(from);
+      break;
+
+    default:
+      
+  }
+}
+
+
+  private async createPeerConnection(peerId: string, isInitiator: boolean) {
+    const pc = new RTCPeerConnection(this.rtcConfig);
+  const pendingCandidates: RTCIceCandidateInit[] = [];
+
+  pc.onicecandidate = ({ candidate }) => {
+    if (candidate) {
+            this.sendSignal({
+        type: 'candidate',
+        from: this.userId,
+        to: peerId,
+        payload: candidate,
+      });
     }
-    this.pendingCandidates.delete(from);
+  };
+
+  const remoteStream = new MediaStream();
+  pc.ontrack = (event) => {
+        remoteStream.addTrack(event.track);
+    this.onRemoteStream(peerId, remoteStream);
+  };
+
+  if (this.localStream) {
+    this.localStream.getTracks().forEach(track => pc.addTrack(track, this.localStream!));
   }
-  public toggleCamera() {
+
+  this.peers.set(peerId, { pc, pendingCandidates });
+
+  if (isInitiator) {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        this.sendSignal({
+      type: 'offer',
+      from: this.userId,
+      to: peerId,
+      payload: offer,
+    });
+  }
+}
+
+  private async setupIncomingConnection(
+  peerId: string,
+  offer: RTCSessionDescriptionInit
+) {
+    if (!this.peers.has(peerId)) {
+    await this.createPeerConnection(peerId, false);
+  }
+  const entry = this.peers.get(peerId)!;
+  const { pc, pendingCandidates } = entry;
+
+  await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+    for (const c of pendingCandidates) {
+    try {
+      await pc.addIceCandidate(c);
+          } catch {
+      
+    }
+  }
+  pendingCandidates.length = 0;
+
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    this.sendSignal({
+    type: 'answer',
+    from: this.userId,
+    to: peerId,
+    payload: answer,
+  });
+}
+
+private async setRemoteDescription(
+  peerId: string,
+  answer: RTCSessionDescriptionInit
+) {
+    const entry = this.peers.get(peerId);
+  if (!entry) {
+    
+    return;
+  }
+  await entry.pc.setRemoteDescription(new RTCSessionDescription(answer));
+    for (const c of entry.pendingCandidates) {
+    try {
+      await entry.pc.addIceCandidate(c);
+          } catch {
+      
+    }
+  }
+  entry.pendingCandidates.length = 0;
+}
+
+private handleIceCandidate(peerId: string, candidateInit: RTCIceCandidateInit) {
+    const entry = this.peers.get(peerId);
+  if (!entry) {
+        const pendingCandidates = this.peers.get(peerId)?.pendingCandidates;
+    if (pendingCandidates) pendingCandidates.push(candidateInit);
+    return;
+  }
+  const { pc, pendingCandidates } = entry;
+  if (!pc.remoteDescription) {
+        pendingCandidates.push(candidateInit);
+  } else {
+        pc
+      .addIceCandidate(new RTCIceCandidate(candidateInit))
+      .catch(err => console.log(err) );
+  }
+}
+
+
+  private removePeer(peerId: string) {
+    const entry = this.peers.get(peerId);
+    if (!entry) return;
+    entry.pc.close();
+    this.peers.delete(peerId);
+  }
+
+  public endCall() {
+    this.sendSignal({ type: 'leave', from: this.userId, payload: null });
+    this.peers.forEach(({ pc }) => pc.close());
+    this.peers.clear();
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(t => t.stop());
+      this.localStream = null;
+    }
+    if (this.localVideoEl) {
+      this.localVideoEl.srcObject = null;
+    }
+  }
+
+  public async startScreenShare(): Promise<void> {
     if (!this.localStream) return;
-    const newState = !this.cameraOn.value;
-    this.localStream.getVideoTracks().forEach(t => t.enabled = newState);
-    this.cameraOn.next(newState);
+    this.screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+    const screenTrack = this.screenStream.getVideoTracks()[0];
+    this.peers.forEach(({ pc }) => {
+      const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+      if (sender) sender.replaceTrack(screenTrack);
+    });
+    this.localVideoEl.srcObject = this.screenStream;
+    screenTrack.onended = () => this.stopScreenShare();
   }
-  public toggleMic() {
-    if (!this.localStream) return;
-    const newState = !this.micOn.value;
-    this.localStream.getAudioTracks().forEach(t => t.enabled = newState);
-    this.micOn.next(newState);
+
+  public stopScreenShare(): void {
+    if (!this.screenStream || !this.localStream) return;
+    const videoTrack = this.localStream.getVideoTracks()[0];
+    this.peers.forEach(({ pc }) => {
+      const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+      if (sender) sender.replaceTrack(videoTrack);
+    });
+    this.localVideoEl.srcObject = this.localStream;
+    this.screenStream.getTracks().forEach(t => t.stop());
+    this.screenStream = null;
   }
+
+  public toggleMic(): void {
+    this.localStream?.getAudioTracks().forEach(t => t.enabled = !t.enabled);
+  }
+
+  public toggleCamera(): void {
+    this.localStream?.getVideoTracks().forEach(t => t.enabled = !t.enabled);
+  }
+
+  private sendSignal(signal: any) {
+    this.ws.sendSignal(this.channelId, signal);
+  }
+  
 }

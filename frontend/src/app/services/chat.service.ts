@@ -23,4 +23,11 @@ export class ChatService {
   fetchPrivateMessages(recipient: string, limit: number=50): Observable<any> {
     return this.http.get(`${this.apiLink}/private/${recipient}`, {withCredentials:true});
   }
+    public isCallActiveOnServer(
+    channel: string
+  ): Observable<{ active: boolean }> {
+    return this.http.get<{ active: boolean }>(
+      `${environment.apiUrl}/call/${channel}/status`
+    , { withCredentials: true });
+  }
 }

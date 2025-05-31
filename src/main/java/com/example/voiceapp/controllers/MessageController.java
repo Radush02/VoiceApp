@@ -3,33 +3,29 @@ package com.example.voiceapp.controllers;
 import com.example.voiceapp.collection.Message;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
-import com.example.voiceapp.exceptions.NotPermittedException;
 import com.example.voiceapp.service.MessageService.MessageService;
-import com.example.voiceapp.service.MessageService.MessageServiceImpl;
-import com.example.voiceapp.service.S3Service.S3Service;
+
 import java.io.IOException;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import com.example.voiceapp.service.S3Service.S3ServiceImpl;
+import com.example.voiceapp.service.S3Service.S3Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/messages")
 public class MessageController {
 
-  @Autowired private MessageServiceImpl messageService;
-  @Autowired private S3ServiceImpl s3Service;
+  @Autowired private MessageService messageService;
+  @Autowired private S3Service s3Service;
 
   @GetMapping("/{channel}")
   public DeferredResult<ResponseEntity<List<Message>>> getMessages(

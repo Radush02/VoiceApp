@@ -4,16 +4,14 @@ import com.example.voiceapp.dtos.LoginDTO;
 import com.example.voiceapp.dtos.RegisterDTO;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
-import com.example.voiceapp.repository.UserRepository;
 import com.example.voiceapp.service.AuthService.AuthService;
-import com.example.voiceapp.service.AuthService.AuthServiceImpl;
 import com.example.voiceapp.util.JwtUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
+
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -26,7 +24,7 @@ import org.springframework.web.context.request.async.DeferredResult;
 @RequestMapping("api/auth")
 public class AuthController {
 
-  @Autowired private AuthServiceImpl authService;
+  @Autowired private AuthService authService;
   @Autowired private JwtUtil jwtUtil;
 
   @PostMapping("/register")

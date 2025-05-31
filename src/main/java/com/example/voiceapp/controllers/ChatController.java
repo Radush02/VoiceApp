@@ -12,7 +12,8 @@ import com.example.voiceapp.exceptions.NotPermittedException;
 import java.security.Principal;
 import java.util.Map;
 
-import com.example.voiceapp.service.MessageService.MessageServiceImpl;
+import com.example.voiceapp.service.CallService.CallService;
+import com.example.voiceapp.service.MessageService.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,8 +25,18 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class ChatController {
-  @Autowired private MessageServiceImpl messageService;
+  @Autowired private MessageService messageService;
   @Autowired private SimpMessagingTemplate messagingTemplate;
+  @Autowired private CallService callService;
+
+  @GetMapping("/api/call/{channel}/status")
+  public ResponseEntity<Map<String, Boolean>> getCallStatus(@PathVariable String channel) {
+    boolean active = callService.isCallActive(channel);
+    System.out.println(">>> [ChatController.GET /api/call/" + channel + "/status] returning active=" + active);
+    return new ResponseEntity<>(Map.of("active", active), HttpStatus.OK);
+  }
+
+
 
   @MessageMapping("/sendMessage/{channel}")
   public void sendMessage(@DestinationVariable String channel,
@@ -75,11 +86,23 @@ public class ChatController {
   public void signal(@DestinationVariable String channel,
                      @Payload SignalMessageDTO msg,
                      Principal principal) {
-    msg.setFrom(principal.getName());
-    messagingTemplate.convertAndSend(
-            "/channel/"+channel+"/signal",
-            msg
-    );
+    String username = principal.getName();
+    msg.setFrom(username);
+    System.out.println(">>> [ChatController.signal] got SIGNAL on channel=" + channel
+            + " from=" + username + ", type=" + msg.getType());
+
+    if ("join".equalsIgnoreCase(msg.getType())) {
+      System.out.println(">>> [ChatController] userJoined triggered for channel=" + channel + ", user=" + username);
+      callService.userJoined(channel, username);
+      System.out.println(">>> [CallService.activeCallers(" + channel + ")] = " + callService.getCurrentCallers(channel));
+    }
+    else if ("leave".equalsIgnoreCase(msg.getType())) {
+      System.out.println(">>> [ChatController] userLeft for channel=" + channel + ", user=" + username);
+      callService.userLeft(channel, username);
+      System.out.println(">>> [CallService.activeCallers(" + channel + ")] = " + callService.getCurrentCallers(channel));
+    }
+    System.out.println(">>> [ChatController] broadcasting SIGNAL back to /channel/" + channel + "/signal → " + msg);
+    messagingTemplate.convertAndSend("/channel/" + channel + "/signal", msg);
   }
 
   @ExceptionHandler(AlreadyExistsException.class)

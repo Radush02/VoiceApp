@@ -2,7 +2,7 @@ package com.example.voiceapp.config;
 
 import java.util.Map;
 
-import com.example.voiceapp.service.PresenceService.PresenceServiceImpl;
+import com.example.voiceapp.service.PresenceService.PresenceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
@@ -13,7 +13,7 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 @Component
 public class WebSocketEventListener {
 
-    @Autowired private PresenceServiceImpl presenceService;
+    @Autowired private PresenceService presenceService;
 
     @EventListener
     public void handleWebSocketConnectListener(SessionConnectEvent event) {

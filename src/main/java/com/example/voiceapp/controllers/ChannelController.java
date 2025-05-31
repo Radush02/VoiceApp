@@ -2,14 +2,13 @@ package com.example.voiceapp.controllers;
 
 import com.example.voiceapp.dtos.ChannelDTO;
 import com.example.voiceapp.dtos.CreateInviteDTO;
-import com.example.voiceapp.dtos.InviteDTO;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
-import com.example.voiceapp.service.ChannelService.ChannelService;
+
 import java.io.IOException;
 import java.util.Map;
 
-import com.example.voiceapp.service.ChannelService.ChannelServiceImpl;
+import com.example.voiceapp.service.ChannelService.ChannelService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -20,7 +19,7 @@ import org.springframework.web.context.request.async.DeferredResult;
 @RestController
 @RequestMapping("/api/channel")
 public class ChannelController {
-  @Autowired private ChannelServiceImpl channelService;
+  @Autowired private ChannelService channelService;
 
   @PostMapping(path = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   @ResponseStatus(HttpStatus.CREATED)

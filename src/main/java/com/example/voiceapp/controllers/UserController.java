@@ -4,17 +4,13 @@ import com.example.voiceapp.collection.Channel;
 import com.example.voiceapp.dtos.*;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
-import com.example.voiceapp.service.ChannelService.ChannelServiceImpl;
-import com.example.voiceapp.service.PresenceService.PresenceServiceImpl;
-import com.example.voiceapp.service.UserService.UserService;
+import com.example.voiceapp.service.PresenceService.PresenceService;
+
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
-import com.example.voiceapp.service.UserService.UserServiceImpl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.example.voiceapp.service.UserService.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,8 +22,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/user")
 public class UserController {
 
-  @Autowired private UserServiceImpl userService;
-  @Autowired private PresenceServiceImpl presenceService;
+  @Autowired private UserService userService;
+  @Autowired private PresenceService presenceService;
   @GetMapping("/getChannels")
   public DeferredResult<ResponseEntity<Map<String, Set<Channel>>>> getChannels() {
     DeferredResult<ResponseEntity<Map<String, Set<Channel>>>> output = new DeferredResult<>();

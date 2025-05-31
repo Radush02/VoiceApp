@@ -1,10 +1,30 @@
 package com.example.voiceapp.service.PresenceService;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
-public interface PresenceServiceImpl {
+@Service
+public class PresenceServiceImpl implements PresenceService {
+    private final Map<String, Boolean> onlineUsers = new ConcurrentHashMap<>();
 
-    CompletableFuture<Void> setUserStatus(String username, boolean isOnline);
-    CompletableFuture<Map<String, Boolean>> getPresenceMap();
+    @Autowired private SimpMessagingTemplate messagingTemplate;
+
+    public CompletableFuture<Void> setUserStatus(String username, boolean isOnline) {
+        onlineUsers.put(username, isOnline);
+        broadcastPresence();
+        return CompletableFuture.completedFuture(null);
+    }
+
+    public CompletableFuture<Map<String, Boolean>> getPresenceMap() {
+        return CompletableFuture.completedFuture(onlineUsers);
+    }
+
+    private void broadcastPresence() {
+        messagingTemplate.convertAndSend("/topic/presence", onlineUsers);
+    }
 }

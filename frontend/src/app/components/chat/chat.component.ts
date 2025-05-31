@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, ViewChild, ElementRef, ChangeDetectorRef, NgZone } from '@angular/core';
 import { WebsocketService } from '../../services/websocket.service';
 import { ActivatedRoute } from '@angular/router';
 import { AuthenticationService } from '../../services/authentication.service';
@@ -7,6 +7,9 @@ import { CommonModule } from '@angular/common';
 import { WebrtcService } from '../../services/webrtc.service';
 import { ChatService } from '../../services/chat.service';
 import { SignalMessage } from '../../models/signal-message.model';
+import { Subject, firstValueFrom } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+
 @Component({
   selector: 'app-chat',
   templateUrl: './chat.component.html',
@@ -14,29 +17,38 @@ import { SignalMessage } from '../../models/signal-message.model';
   imports: [FormsModule, CommonModule],
   standalone: true
 })
-export class ChatComponent implements OnInit, AfterViewChecked {
+export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
+  private destroy$ = new Subject<void>();
+
   messages: any[] = [];
   messageContent = '';
-  username: string = '';
-  channel: string = '';
+  username = '';
+  channel = '';
   selectedImage: File | null = null;
   typingUsers = new Set<string>();
   typingTimeouts = new Map<string, any>();
   lastTypingTime = 0;
-  typingCooldown = 2000; 
+  typingCooldown = 2000;
+  private isCallActive = false;
 
-  @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
-  @ViewChild('local')  localVideo!:  ElementRef<HTMLVideoElement>;
-  @ViewChild('remote') remoteVideo!: ElementRef<HTMLVideoElement>;
-  
+  remoteStreams: { peerId: string; stream: MediaStream }[] = [];
+
+  @ViewChild('messagesContainer') private messagesContainer!: ElementRef<HTMLDivElement>;
+  @ViewChild('local') private localVideo!: ElementRef<HTMLVideoElement>;
+  @ViewChild('imageUpload') private imageInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('remote') private remoteVideo!: ElementRef<HTMLVideoElement>;
+
+
   constructor(
     private websocketService: WebsocketService,
     private chatService: ChatService,
     private params: ActivatedRoute,
     private authService: AuthenticationService,
-    private webrtc: WebrtcService
+    private webrtc: WebrtcService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {
-    this.params.params.subscribe((params) => {
+        this.params.params.subscribe((params) => {
       this.channel = params['channel'];
       console.log('Channel:', this.channel);
     });
@@ -48,13 +60,14 @@ export class ChatComponent implements OnInit, AfterViewChecked {
   }
 
   ngOnInit() {
-    this.websocketService.subscribeToChannel(`/channel/${this.channel}`, (message: any) => {
-      if (message) {
-        
-        this.messages.push(message);
-      }
+
+
+    this.websocketService.subscribeToChannel(`/channel/${this.channel}`, msg => {
+      this.ngZone.run(() => {
+        this.messages = [...this.messages, msg];
+        this.cdr.markForCheck();
+      });
     });
-    
     this.chatService.fetchMessages(this.channel).subscribe((messages) => {
       if (messages) {
         this.messages = messages;
@@ -67,109 +80,191 @@ export class ChatComponent implements OnInit, AfterViewChecked {
         this.messages.push(message);
       }
     });
-  this.websocketService.subscribeToTyping(this.channel, (user) => {
-    if (user !== this.username) {
-      this.typingUsers.add(user);
-      if (this.typingTimeouts.has(user)) {
-        clearTimeout(this.typingTimeouts.get(user));
+
+    this.websocketService.subscribeToTyping(this.channel, user => {
+      if (user !== this.username) {
+        this.typingUsers.add(user);
+        if (this.typingTimeouts.has(user)) {
+          clearTimeout(this.typingTimeouts.get(user));
+        }
+        const timeout = setTimeout(() => {
+          this.typingUsers.delete(user);
+          this.typingTimeouts.delete(user);
+          this.cdr.markForCheck();
+        }, 3000);
+        this.typingTimeouts.set(user, timeout);
+        this.cdr.markForCheck();
       }
-
-      const timeout = setTimeout(() => {
-        this.typingUsers.delete(user);
-        this.typingTimeouts.delete(user);
-      }, 3000);
-
-      this.typingTimeouts.set(user, timeout);
-    }
-  });
-
+    });
   }
 
   ngAfterViewChecked() {
     this.scrollToBottom();
+    
   }
 
-  scrollToBottom(): void {
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private scrollToBottom(): void {
     try {
-      this.messagesContainer.nativeElement.scrollTop = 
-        this.messagesContainer.nativeElement.scrollHeight;
-    } catch(err) { }
+      this.messagesContainer.nativeElement.scrollTop = this.messagesContainer.nativeElement.scrollHeight;
+    } catch {}
   }
 
   onImageSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
+    if (input.files?.length) {
       this.selectedImage = input.files[0];
     }
   }
 
   getImageName(): string {
     if (this.selectedImage) {
-      return this.selectedImage.name.length > 20 ? this.selectedImage.name.substring(0, 20) + '...' : this.selectedImage.name;
+      const name = this.selectedImage.name;
+      return name.length > 20 ? name.slice(0, 20) + '...' : name;
     }
     return '';
   }
+
   removeSelectedImage(): void {
     this.selectedImage = null;
-    const fileInput = document.getElementById('imageUpload') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = '';
-    }
+    this.imageInput.nativeElement.value = '';
   }
 
   async sendMessage() {
     if (!this.messageContent && !this.selectedImage) return;
 
     let imageUrl = '';
-    
     if (this.selectedImage) {
       try {
-        imageUrl = await this.uploadImage(this.selectedImage);
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        alert('Failed to upload image. Please try again.');
+        const resp = await firstValueFrom(this.chatService.uploadImage(this.channel, this.selectedImage));
+        imageUrl = resp.message;
+      } catch (err) {
+        console.error('Image upload failed', err);
+        alert('Failed to upload image.');
         return;
       }
     }
 
-    const message = { 
-      sender: this.username, 
-      content: this.messageContent, 
-      channel: this.channel,
-      attachment: imageUrl
-    };
-    
-    console.log("Sending message:", message);
+    const message = { sender: this.username, content: this.messageContent, channel: this.channel, attachment: imageUrl };
     this.websocketService.sendMessage(this.channel, message);
-
     this.messageContent = '';
     this.removeSelectedImage();
   }
-  sendTyping(channelId: string) {
-    this.websocketService.sendTyping(channelId);
-  }
-onTyping(): void {
-  const now = Date.now();
-  console.log('Typing event triggered:', now);
-  if (now - this.lastTypingTime > this.typingCooldown) {
-    this.sendTyping(this.channel);
-    this.lastTypingTime = now;
-  }
-}
-  async uploadImage(file: File): Promise<string> {
-    const response = await this.chatService.uploadImage(this.channel,file).toPromise();
-    return response.message;
-  }
-  async call() {
-    try {
-      
-      await this.webrtc.init(this.channel, this.localVideo.nativeElement, this.remoteVideo.nativeElement);
-    } catch (err:any) {
-      console.error('Could not start call:', err);
-      alert('Error starting video call: ' + err.message);
+
+  onTyping(): void {
+    const now = Date.now();
+    if (now - this.lastTypingTime > this.typingCooldown) {
+      this.websocketService.sendTyping(this.channel);
+      this.lastTypingTime = now;
     }
   }
+
+ async call() {
+    if (!this.channel) return;
+
+    if (this.isCallActive) {
+      return;
+    }
+    console.log('>>> [ChatComponent.call] isCallActive=', this.isCallActive);
+
+    let roomExists: boolean;
+    try {
+      console.log(`>>> [ChatComponent.call] asking server: is call active on channel="${this.channel}"`);
+      const resp = await firstValueFrom(this.chatService.isCallActiveOnServer(this.channel));
+      roomExists = resp.active;
+      console.log(`>>> [ChatComponent.call] server says active=${roomExists}`);
+    } catch (err) {
+      console.error('>>> [ChatComponent.call] ERROR while checking call status', err);
+      roomExists = false;
+    }
+
+
+    this.isCallActive = true;
+
+    if (!roomExists) {
+          console.log('>>> [ChatComponent.call] Not active yet, will initAsInitiator()');
+
+// --- in chat.component.ts, inside the constructor or ngOnInit, you pass a callback to WebrtcService:
+await this.webrtc.initAsInitiator(
+  this.channel,
+  this.localVideo.nativeElement,
+  (peerId: string, stream: MediaStream) => {
+    // 1) Log that we got a remote stream for peerId
+    console.log(`[ChatComponent] onRemoteStream callback invoked for peerId=${peerId}`, stream);
+
+    // 2) Add it to the remoteStreams array so *the template* will render a <video id="remoteVideo_<peerId>">
+    this.remoteStreams.push({ peerId, stream });
+    this.cdr.markForCheck();
+
+    // 3) After Angular has rendered the <video> tag (with id="remoteVideo_<peerId>"),
+    //    grab it from the DOM and set its srcObject. We use a short setTimeout(…, 0)
+    //    to ensure that change detection has applied and the DOM node is present.
+    setTimeout(() => {
+      const vid: HTMLVideoElement | null =
+        document.getElementById(`remoteVideo_${peerId}`) as HTMLVideoElement;
+      if (vid) {
+        console.log(`[ChatComponent] found <video id="remoteVideo_${peerId}"> → attaching stream`);
+        vid.srcObject = stream;
+      } else {
+        console.warn(`[ChatComponent] could NOT find <video id="remoteVideo_${peerId}"> in DOM`);
+      }
+    }, 0);
+  }
+);
+
+    } else {
+          console.log('>>> [ChatComponent.call] Room already exists on server, will initAsJoiner()');
+
+     await this.webrtc.initAsJoiner(
+  this.channel,
+  this.localVideo.nativeElement,
+  (peerId: string, stream: MediaStream) => {
+    console.log(`[ChatComponent] onRemoteStream (joiner) for peerId=${peerId}`, stream);
+    this.remoteStreams.push({ peerId, stream });
+    this.cdr.markForCheck();
+    setTimeout(() => {
+      const vid = document.getElementById(`remoteVideo_${peerId}`) as HTMLVideoElement;
+      if (vid) {
+        console.log(`[ChatComponent] found <video id="remoteVideo_${peerId}"> → attaching stream`);
+        vid.srcObject = stream;
+      } else {
+        console.warn(`[ChatComponent] no <video id="remoteVideo_${peerId}"> found`);
+      }
+    }, 0);
+  }
+);
+
+    }
+  }
+
   getTypingUsers(): string {
     return Array.from(this.typingUsers).join(', ');
+  }
+
+  endCall() {
+    this.webrtc.endCall();
+    this.remoteStreams = [];
+    this.isCallActive = false;
+
+  }
+
+  toggleCamera() {
+    this.webrtc.toggleCamera();
+  }
+
+  toggleMic() {
+    this.webrtc.toggleMic();
+  }
+
+  startScreenShare() {
+    this.webrtc.startScreenShare();
+  }
+
+  stopScreenShare() {
+    this.webrtc.stopScreenShare();
   }
 }
