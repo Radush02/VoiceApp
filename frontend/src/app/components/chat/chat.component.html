@@ -10,38 +10,68 @@
     </ng-container>
   </div>
 
-  <div class="messages-container">
-    <div *ngFor="let message of messages" 
-         [ngClass]="{'message-right': message.sender === username, 'message-left': message.sender !== username}"
-         class="message-item">
+  <div class="messages-container" #messagesContainer>
+    <div
+      *ngFor="let message of messages"
+      [ngClass]="{
+        'message-right': message.sender === username,
+        'message-left': message.sender !== username
+      }"
+      class="message-item"
+    >
       <div class="message-content">
         <div class="sender-name">{{ message.sender }}</div>
-        <div class="message-text" *ngIf="message.content">{{ message.content }}</div>
-        <div class="message-image" *ngIf="message.attachment">
-          <img [src]="message.attachment" alt="Shared image" />
+
+        <div class="message-text" *ngIf="message.content">
+          {{ message.content }}
+        </div>
+        <div *ngIf="message.attachment">
+          <ng-container *ngIf="isImage(message.attachment)">
+            <div class="message-image">
+              <img
+                [src]="message.attachment"
+                alt="Shared image"
+                style="max-width: 200px; max-height: 200px;"
+              />
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="isAudio(message.attachment)">
+            <div class="message-audio">
+              <audio
+                controls
+                [src]="message.attachment"
+                preload="none"
+                style="width: 200px; height: 40px"
+              ></audio>
+            </div>
+          </ng-container>
         </div>
       </div>
     </div>
   </div>
 
-<div class="videos">
-  <video #local muted autoplay playsinline style="width:200px; height:200px"></video>
-  <ng-container *ngFor="let r of remoteStreams">
+  <div class="videos">
     <video
-      [id]="'remoteVideo_' + r.peerId"
+      #local
+      muted
       autoplay
       playsinline
-      style="width:200px; height:200px"
-      #remote
+      style="width: 200px; height: 200px"
     ></video>
-  </ng-container>
-</div>
-
+    <ng-container *ngFor="let r of remoteStreams">
+      <video
+        [id]="'remoteVideo_' + r.peerId"
+        autoplay
+        playsinline
+        style="width: 200px; height: 200px"
+        #remote
+      ></video>
+    </ng-container>
+  </div>
 
   <div class="call-controls">
     <button (click)="call()">Start Call</button>
-
-
     <button (click)="endCall()">End Call</button>
     <button (click)="toggleCamera()">Toggle Camera</button>
     <button (click)="toggleMic()">Toggle Mic</button>
@@ -55,19 +85,54 @@
       placeholder="Type a message..."
       (keyup.enter)="sendMessage()"
       (input)="onTyping()"
+      [disabled]="isRecording"
     />
 
-    <div class="upload-container">
-      <label for="imageUpload" class="upload-button">
+    <div class="upload-container" style="display: inline-block; margin-right: 8px;">
+      <label
+        for="imageUpload"
+        class="upload-button"
+        [class.disabled]="isRecording || isUploadingAudio"
+      >
         <span class="upload-icon">📎</span>
       </label>
-      <input type="file" id="imageUpload" accept="image/*" (change)="onImageSelected($event)" />
+      <input
+        #imageUpload
+        type="file"
+        id="imageUpload"
+        accept="image/*"
+        (change)="onImageSelected($event)"
+        [disabled]="isRecording || isUploadingAudio"
+      />
       <div *ngIf="selectedImage" class="selected-image-name">
         {{ getImageName() }}
-        <button class="remove-image" (click)="removeSelectedImage()">✕</button>
+        <button class="remove-image" (click)="removeSelectedImage()">
+          ✕
+        </button>
       </div>
     </div>
 
-    <button (click)="sendMessage()" [disabled]="!messageContent && !selectedImage">Send</button>
+    <button
+      (click)="sendMessage()"
+      [disabled]="(!messageContent && !selectedImage) || isRecording || isUploadingAudio"
+    >
+      Send
+    </button>
+
+    <div class="voice-record-container" style="display: inline-block; margin-left: 16px;">
+      <button
+        (click)="isRecording ? stopRecording() : startRecording()"
+        [disabled]="selectedImage || isUploadingAudio"
+      >
+        {{ isRecording ? "Stop Recording" : "Record Voice" }}
+      </button>
+
+      <span *ngIf="isRecording" style="color: red; margin-left: 8px;">
+        ● Recording...
+      </span>
+      <span *ngIf="isUploadingAudio && !isRecording" style="color: blue; margin-left: 8px;">
+        Uploading audio…
+      </span>
+    </div>
   </div>
 </div>
