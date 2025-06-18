@@ -1,62 +1,188 @@
-<mat-card class="profile-popup">
-  <mat-card-header>
-    <div mat-card-avatar class="avatar">
-      <ng-container *ngIf="user.imageLink;" >
-        <img [src]="user.imageLink" alt="{{ user.username }}'s avatar" />
-      </ng-container>
-      <ng-container *ngIf="!user.imageLink">
-        <ng-template #letterIcon>
-          <div class="default-icon">{{ user.username.charAt(0) }}</div>
-        </ng-template>
-      </ng-container>
-      <input
-        type="file"
-        #fileInput
-        accept="image/*"
-        (change)="onImageSelected($event)"
-      />
-      <button
-      mat-icon-button
-      matTooltip="Change profile picture"
-      (click)="changeProfilePicture()"
-    >
-      <mat-icon>camera_alt</mat-icon>
-    </button>
+<div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" (click)="close()">
+  <div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md max-h-[90vh] overflow-hidden" (click)="$event.stopPropagation()">
+        <div class="relative bg-gradient-to-r from-purple-600 to-pink-600 p-6 pb-16">
+      <button 
+        (click)="close()"
+        class="absolute top-4 right-4 text-white/80 hover:text-white transition-colors duration-200"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+
+      <div class="flex flex-col items-center">
+        <div class="relative group">
+          <div class="w-24 h-24 rounded-full border-4 border-white/20 overflow-hidden bg-gray-700 flex items-center justify-center">
+            <img 
+              *ngIf="user.imageLink; else avatarInitial" 
+              [src]="user.imageLink" 
+              [alt]="user.username + '\'s avatar'"
+              class="w-full h-full object-cover"
+            />
+            <ng-template #avatarInitial>
+              <span class="text-white text-2xl font-bold">{{ user.username.charAt(0).toUpperCase() }}</span>
+            </ng-template>
+          </div>
+
+          <div *ngIf="isSelf()" class="absolute -bottom-2 -right-2">
+            <input
+              type="file"
+              #fileInput
+              accept="image/*"
+              (change)="onImageSelected($event)"
+              class="hidden"
+            />
+            <button
+              (click)="fileInput.click()"
+              class="w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center border-2 border-gray-800 transition-colors duration-200"
+              title="Change profile picture"
+            >
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+            </button>
+          </div>
+
+          <button
+            *ngIf="selectedImage && isSelf()"
+            (click)="changeProfilePicture()"
+            class="absolute -bottom-2 -left-2 w-8 h-8 bg-green-600 hover:bg-green-700 rounded-full flex items-center justify-center border-2 border-gray-800 transition-colors duration-200"
+            title="Upload new picture"
+          >
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="text-center mt-4">
+          <h2 class="text-white text-xl font-bold">{{ user.username }}</h2>
+          <p class="text-white/80 text-sm">{{ user.status || 'Online' }}</p>
+        </div>
+      </div>
     </div>
-    <mat-card-title>{{ user.username }}</mat-card-title>
-    <mat-card-subtitle>{{ user.status }}</mat-card-subtitle>
-    <ng-container *ngIf="isSelf()">
-      
-    </ng-container>
-  </mat-card-header>
 
-  <mat-card-content>
-    <p><strong>About me:</strong></p>
-    <p>{{ user.aboutMe || 'No information provided.' }}</p>
+    <div class="p-6 space-y-6 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+            <div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-white font-semibold text-sm uppercase tracking-wide">About Me</h3>
+          <button 
+            *ngIf="isSelf()"
+            (click)="editAboutMe()"
+            class="text-gray-400 hover:text-white transition-colors duration-200"
+            title="Edit about me"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="bg-gray-700/50 rounded-lg p-3">
+          <p class="text-gray-300 text-sm">
+            {{ user.aboutMe || 'No information provided.' }}
+          </p>
+        </div>
+      </div>
+      <div *ngIf="isSelf()" class="grid grid-cols-2 gap-4">
+        <div class="bg-gray-700/50 rounded-lg p-3 text-center">
+          <div class="text-white text-lg font-bold">{{ channelsCount }}</div>
+          <div class="text-gray-400 text-xs uppercase tracking-wide">Servers</div>
+        </div>
+        <div class="bg-gray-700/50 rounded-lg p-3 text-center">
+          <div class="text-white text-lg font-bold">{{ requestsCount }}</div>
+          <div class="text-gray-400 text-xs uppercase tracking-wide">Friend Requests</div>
+        </div>
+      </div>
 
-    <ng-container *ngIf="isSelf()">
-      <p><strong>Channels:</strong> {{ channelsCount }}</p>
-      <p><strong>Friend requests pending:</strong> {{ requestsCount }}</p>
-    </ng-container>
+      <div *ngIf="!isSelf()">
+        <h3 class="text-white font-semibold text-sm uppercase tracking-wide mb-2">Friends in Common</h3>
+        <div class="bg-gray-700/50 rounded-lg p-3">
+          <p class="text-gray-300 text-sm">
+            <ng-container *ngIf="user.friends && user.friends.length > 0; else noFriends">
+              {{ user.friends.join(', ') }}
+            </ng-container>
+            <ng-template #noFriends>
+              <span class="text-gray-500">No friends in common</span>
+            </ng-template>
+          </p>
+        </div>
+      </div>
+      <div *ngIf="isSelf() && requestsCount !== null && requestsCount > 0">
+        <h3 class="text-white font-semibold text-sm uppercase tracking-wide mb-3">
+          Pending Friend Requests ({{ requestsCount }})
+        </h3>
+        <div class="space-y-2 max-h-40 overflow-y-auto">
+          <div *ngFor="let request of pendingRequests" class="bg-gray-700/50 rounded-lg p-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center min-w-0 flex-1">
+                <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center mr-3">
+                  <span class="text-white text-sm font-medium">{{ request.charAt(0).toUpperCase() }}</span>
+                </div>
+                <span class="text-white text-sm font-medium truncate">{{ request }}</span>
+              </div>
+                            <div class="flex items-center space-x-2 ml-3">
+                <button
+                  (click)="processRequest(request, RequestResponse.ACCEPTED)"
+                  class="w-8 h-8 bg-green-600 hover:bg-green-700 rounded-full flex items-center justify-center transition-colors duration-200"
+                  title="Accept"
+                >
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </button>
+                <button
+                  (click)="processRequest(request, RequestResponse.REJECTED)"
+                  class="w-8 h-8 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center transition-colors duration-200"
+                  title="Reject"
+                >
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div *ngIf="isSelf() && requestsCount === 0" class="text-center py-4">
+        <div class="text-gray-500 text-sm">No pending friend requests</div>
+      </div>
+    </div>
 
-    <ng-container *ngIf="!isSelf()">
-      <p><strong>Friends in common:</strong>
-        <ng-container *ngIf="user.friends.length; else none">
-          {{ user.friends.join(', ') }}
-        </ng-container>
-        <ng-template #none>None</ng-template>
-      </p>
-      </ng-container> 
-  </mat-card-content>
-<div *ngIf="isSelf() && requestsCount !== null" class="pending-requests">
-  <h3>Pending Friend Requests ({{ requestsCount }})</h3>
-  <div *ngFor="let request of pendingRequests" class="request-item">
-    <span>{{ request }}</span>
-<button mat-button color="primary" (click)="processRequest(request, RequestResponse.ACCEPTED)">Accept</button>
-<button mat-button color="warn" (click)="processRequest(request, RequestResponse.REJECTED)">Reject</button>
+    <div class="border-t border-gray-700 p-4">
+      <div class="flex justify-end space-x-3">
+        <button 
+          *ngIf="!isSelf() && !isFriend"
+          class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
+        >
+          Send Friend Request
+        </button>
+                <button 
+          (click)="close()"
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
+        >
+          Close
+        </button>
+      </div>
+    </div>
   </div>
 </div>
-  <mat-card-actions align="end">
-    <button mat-button (click)="close()">Close</button>
-  </mat-card-actions>
-</mat-card>
+<style>
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #4B5563;
+    border-radius: 2px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: #6B7280;
+  }
+</style>

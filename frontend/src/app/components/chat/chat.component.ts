@@ -19,12 +19,16 @@ import { SignalMessage } from "../../models/signal-message.model";
 import { Subject, firstValueFrom, Subscription } from "rxjs";
 import { takeUntil } from "rxjs/operators";
 import { v4 as uuidv4 } from "uuid";
+import { ServerMembersPopupComponent } from "../server-members-popup/server-members-popup.component";
+import { MatDialog } from "@angular/material/dialog";
+import { UserProfilePopupComponent } from '../user-profile-popup/user-profile-popup.component';
+import { UserService } from "../../services/user.service";
 
 @Component({
   selector: "app-chat",
   templateUrl: "./chat.component.html",
   styleUrls: ["./chat.component.css"],
-  imports: [FormsModule, CommonModule],
+  imports: [FormsModule, CommonModule,ServerMembersPopupComponent],
   standalone: true,
 })
 export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
@@ -39,9 +43,20 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   typingTimeouts = new Map<string, any>();
   lastTypingTime = 0;
   typingCooldown = 2000;
+  isLocalCameraOn = true;
 
+showMembersPopup: boolean = false;
+serverName: string = '';
+openMembersPopup(): void {
+  this.showMembersPopup = true;
+  this.serverName = this.channel;
+}
+
+closeMembersPopup(): void {
+  this.showMembersPopup = false;
+}
   private isCallActive = false;
-  remoteStreams: { peerId: string; stream: MediaStream }[] = [];
+  remoteStreams: { peerId: string; stream: MediaStream;  cameraOn: boolean;}[] = [];
 
   private mediaRecorder!: MediaRecorder;
   private recordedChunks: Blob[] = [];
@@ -63,7 +78,9 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     private authService: AuthenticationService,
     private webrtc: WebrtcService,
     private cdr: ChangeDetectorRef,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private dialog: MatDialog,
+    private userService: UserService
   ) {
     this.params.params.subscribe((params) => {
       this.channel = params["channel"];
@@ -285,7 +302,8 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
         this.channel,
         this.localVideo.nativeElement,
         (peerId: string, stream: MediaStream) => {
-          this.remoteStreams.push({ peerId, stream });
+          this.remoteStreams.push({ peerId, stream,  cameraOn: stream.getVideoTracks().some(track => track.enabled)
+ });
           this.cdr.markForCheck();
           setTimeout(() => {
             const vid: HTMLVideoElement | null = document.getElementById(
@@ -302,7 +320,8 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
         this.channel,
         this.localVideo.nativeElement,
         (peerId: string, stream: MediaStream) => {
-          this.remoteStreams.push({ peerId, stream });
+          this.remoteStreams.push({ peerId, stream,  cameraOn: stream.getVideoTracks().some(track => track.enabled)
+ });
           this.cdr.markForCheck();
           setTimeout(() => {
             const vid = document.getElementById(
@@ -316,6 +335,11 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
       );
     }
   }
+selectedStream: string | null = null;
+
+selectStream(peerId: string) {
+  this.selectedStream = this.selectedStream === peerId ? null : peerId;
+}
 
   getTypingUsers(): string {
     return Array.from(this.typingUsers).join(", ");
@@ -327,9 +351,9 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.isCallActive = false;
   }
 
-  toggleCamera() {
-    this.webrtc.toggleCamera();
-  }
+toggleCamera(): void {
+  this.isLocalCameraOn = this.webrtc.toggleCamera();
+}
 
   toggleMic() {
     this.webrtc.toggleMic();
@@ -350,4 +374,68 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   isAudio(url: string): boolean {
     return /\.(mp3|wav|ogg|webm)(\?.*)?$/i.test(url);
   }
+
+serverId: string = '';
+currentChannelId: string = '';
+currentVoiceChannelId: string = '';
+textChannels: any[] = [];
+voiceChannels: any[] = [];
+currentUser: any = null;
+isMicrophoneMuted: boolean = false;
+isDeafened: boolean = false;
+
+
+trackByChannelId(index: number, channel: any): string {
+  return channel.id;
+}
+
+joinVoiceChannel(channel: any): void {
+  this.currentVoiceChannelId = channel.id;
+}
+
+toggleMicrophone(): void {
+  this.isMicrophoneMuted = !this.isMicrophoneMuted;
+}
+
+toggleHeadphones(): void {
+  this.isDeafened = !this.isDeafened;
+
+}
+
+openUserSettings(): void {
+
+}
+
+openProfilePopup(username: string):void{
+
+    this.userService.getUserInfo(username).subscribe(
+      (user) => {;
+    this.dialog.open(UserProfilePopupComponent, {
+        data: user,
+        panelClass: 'custom-dialog-container'
+      });
+      });
+}
+
+}
+interface TextChannel {
+  id: string;
+  name: string;
+  hasUnread: boolean;
+  notificationCount: number;
+}
+
+interface VoiceChannel {
+  id: string;
+  name: string;
+  userCount: number;
+  connectedUsers: ConnectedUser[];
+}
+
+interface ConnectedUser {
+  id: string;
+  username: string;
+  avatar?: string;
+  isMuted: boolean;
+  isDeafened: boolean;
 }

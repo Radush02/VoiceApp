@@ -50,18 +50,18 @@ public class AuthController {
 
       ResponseCookie jwtCookie = ResponseCookie.from("jwt", accessToken)
               .httpOnly(true)
-              .secure(false)
+              .secure(true)
               .path("/")
               .maxAge(60 * 60)
-              .sameSite("Strict")
+              .sameSite("None")
               .build();
 
       ResponseCookie refreshCookie = ResponseCookie.from("refresh", refreshToken)
               .httpOnly(true)
-              .secure(false)
+              .secure(true)
               .path("/api/auth/refresh")
               .maxAge(60L * 60L * 24L * 30L)
-              .sameSite("Strict")
+              .sameSite("None")
               .build();
 
       response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());

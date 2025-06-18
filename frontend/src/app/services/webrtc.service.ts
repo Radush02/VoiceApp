@@ -2,29 +2,40 @@ import { Injectable } from "@angular/core";
 import { WebsocketService } from "./websocket.service";
 import { SignalMessage } from "../models/signal-message.model";
 import { AuthenticationService } from "./authentication.service";
-
+import { HttpClient } from '@angular/common/http';
+import { environment } from "../environments/environment";
 @Injectable({ providedIn: "root" })
 export class WebrtcService {
   private channelId = "";
   private userId = "";
+  private apiUrl = environment.apiUrl;
   private localStream: MediaStream | null = null;
   private screenStream: MediaStream | null = null;
   private peers = new Map<
     string,
     { pc: RTCPeerConnection; pendingCandidates: RTCIceCandidateInit[] }
   >();
+  private pendingIceCandidates = new Map<string, RTCIceCandidateInit[]>();
+  private reofferTimers = new Map<string, any>();
+  private isNegotiating = false;
+  private forceRelay = false;
   public localVideoEl!: HTMLVideoElement;
   public onRemoteStream!: (peerId: string, stream: MediaStream) => void;
   private readonly rtcConfig: RTCConfiguration = {
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-  };
+  iceServers: []
+};
 
   constructor(
     private ws: WebsocketService,
-    private auth: AuthenticationService
+    private auth: AuthenticationService,
+    private http: HttpClient
   ) {
-    this.auth.getUsername().subscribe((id) => (this.userId = id));
+    this.auth.getUsername().subscribe((id) => {
+      this.userId = id;
+      this.loadTurnServers(id); 
+    });
   }
+
 
   public async init(
     channel: string,
@@ -45,6 +56,11 @@ export class WebrtcService {
         );
 
         try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const hasInput = devices.some((d) => d.kind === "audioinput" || d.kind === "videoinput");
+          if (!hasInput) {
+            throw new Error("No media devices available");
+          }
           this.localStream = await navigator.mediaDevices.getUserMedia({
             video: true,
             audio: true,
@@ -77,6 +93,11 @@ export class WebrtcService {
         );
 
         try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const hasInput = devices.some((d) => d.kind === "audioinput" || d.kind === "videoinput");
+          if (!hasInput) {
+            throw new Error("No media devices available");
+          }
           this.localStream = await navigator.mediaDevices.getUserMedia({
             video: true,
             audio: true,
@@ -109,6 +130,11 @@ export class WebrtcService {
         );
 
         try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const hasInput = devices.some((d) => d.kind === "audioinput" || d.kind === "videoinput");
+          if (!hasInput) {
+            throw new Error("No media devices available");
+          }
           this.localStream = await navigator.mediaDevices.getUserMedia({
             video: true,
             audio: true,
@@ -166,8 +192,13 @@ export class WebrtcService {
   }
 
   private async createPeerConnection(peerId: string, isInitiator: boolean) {
-    const pc = new RTCPeerConnection(this.rtcConfig);
-    const pendingCandidates: RTCIceCandidateInit[] = [];
+    const config = this.forceRelay
+      ? { ...this.rtcConfig, iceTransportPolicy: "relay" as RTCIceTransportPolicy }
+      : this.rtcConfig;
+    const pc = new RTCPeerConnection(config);
+    const pendingCandidates:
+      RTCIceCandidateInit[] = this.pendingIceCandidates.get(peerId) || [];
+    this.pendingIceCandidates.delete(peerId);
 
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
@@ -179,17 +210,78 @@ export class WebrtcService {
         });
       }
     };
+    pc.onicecandidateerror = (err) => {
+      console.error("ICE candidate error", err);
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === "failed") {
+        try {
+          pc.restartIce();
+        } catch {}
+      }
+    };
+
+    pc.onnegotiationneeded = async () => {
+      if (this.isNegotiating) {
+        return;
+      }
+      this.isNegotiating = true;
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        this.sendSignal({
+          type: "offer",
+          from: this.userId,
+          to: peerId,
+          payload: offer,
+        });
+        const timer = setTimeout(() => {
+          if (pc.signalingState !== "stable") {
+            this.sendSignal({
+              type: "offer",
+              from: this.userId,
+              to: peerId,
+              payload: offer,
+            });
+          }
+        }, 5000);
+        this.reofferTimers.set(peerId, timer);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        this.isNegotiating = false;
+      }
+    };
 
     const remoteStream = new MediaStream();
-    pc.ontrack = (event) => {
+ pc.ontrack = (event) => {
       remoteStream.addTrack(event.track);
+      event.track.onended = () => remoteStream.removeTrack(event.track);
       this.onRemoteStream(peerId, remoteStream);
     };
 
+    pc.oniceconnectionstatechange = () => {
+      const state = pc.iceConnectionState;
+      if (state === "failed") {
+        try {
+          pc.restartIce();
+          this.forceRelay = true;
+        } catch {}
+      } else if (state === "disconnected") {
+        setTimeout(() => {
+          if (pc.iceConnectionState === "disconnected") {
+            this.removePeer(peerId);
+          }
+        }, 2000);
+      }
+    };
+
     if (this.localStream) {
-      this.localStream
-        .getTracks()
-        .forEach((track) => pc.addTrack(track, this.localStream!));
+      this.localStream.getTracks().forEach((track) => {
+        track.onended = () => this.handleDeviceChange();
+        pc.addTrack(track, this.localStream!);
+      });
     }
 
     this.peers.set(peerId, { pc, pendingCandidates });
@@ -215,7 +307,9 @@ export class WebrtcService {
     }
     const entry = this.peers.get(peerId)!;
     const { pc, pendingCandidates } = entry;
-
+    if (pc.signalingState !== "stable") {
+      await pc.setLocalDescription({ type: "rollback" } as any);
+    }
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
 
     for (const c of pendingCandidates) {
@@ -277,6 +371,12 @@ export class WebrtcService {
     if (!entry) return;
     entry.pc.close();
     this.peers.delete(peerId);
+    this.pendingIceCandidates.delete(peerId);
+    const timer = this.reofferTimers.get(peerId);
+    if (timer) {
+      clearTimeout(timer);
+      this.reofferTimers.delete(peerId);
+    }
   }
 
   public endCall() {
@@ -322,11 +422,85 @@ export class WebrtcService {
     this.localStream?.getAudioTracks().forEach((t) => (t.enabled = !t.enabled));
   }
 
-  public toggleCamera(): void {
-    this.localStream?.getVideoTracks().forEach((t) => (t.enabled = !t.enabled));
+public toggleCamera(): boolean {
+  if (!this.localStream) return false;
+
+  const videoTrack = this.localStream.getVideoTracks()[0];
+  if (videoTrack) {
+    videoTrack.enabled = !videoTrack.enabled;
+    return videoTrack.enabled;
   }
+
+  return false;
+}
+
 
   private sendSignal(signal: any) {
     this.ws.sendSignal(this.channelId, signal);
   }
+ private restartConnections(): void {
+    this.forceRelay = true;
+    this.peers.forEach(({ pc }) => {
+      try {
+        pc.restartIce();
+      } catch {}
+    });
+  }
+
+  private async handleDeviceChange(): Promise<void> {
+    if (!this.localStream) {
+      return;
+    }
+    try {
+      const constraints = {
+        video: this.localStream.getVideoTracks().length > 0,
+        audio: this.localStream.getAudioTracks().length > 0,
+      };
+      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      const newVideo = newStream.getVideoTracks()[0];
+      const newAudio = newStream.getAudioTracks()[0];
+
+      if (newVideo) {
+        this.localStream.getVideoTracks().forEach((t) => t.stop());
+        this.localStream.addTrack(newVideo);
+        this.peers.forEach(({ pc }) => {
+          const sender = pc.getSenders().find((s) => s.track?.kind === "video");
+          if (sender) sender.replaceTrack(newVideo);
+        });
+      }
+
+      if (newAudio) {
+        this.localStream.getAudioTracks().forEach((t) => t.stop());
+        this.localStream.addTrack(newAudio);
+        this.peers.forEach(({ pc }) => {
+          const sender = pc.getSenders().find((s) => s.track?.kind === "audio");
+          if (sender) sender.replaceTrack(newAudio);
+        });
+      }
+    } catch (err) {
+      console.error("Failed to handle device change", err);
+    }
+  }
+  private loadTurnServers(userId: string): void {
+  this.http.get<{
+    username: string;
+    credential: string;
+    urls: string[];
+  }>(`${this.apiUrl}/turn?userId=${userId}`).subscribe({
+    next: (turn) => {
+      this.rtcConfig.iceServers = [
+        {
+          urls: turn.urls,
+          username: turn.username,
+          credential: turn.credential,
+        },
+        { urls: "stun:stun.l.google.com:19302" },
+      ];
+    },
+    error: (err) => {
+      console.error("Failed to load TURN credentials", err);
+    },
+  });
+}
+
 }

@@ -10,16 +10,24 @@ import { MatCardModule }   from '@angular/material/card';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [SidebarComponent, RouterOutlet, MatDialogModule,
+  imports: [
+    SidebarComponent,
+    RouterOutlet,
+    MatDialogModule,
     MatButtonModule,
     MatIconModule,
     MatListModule,
-    MatCardModule],
+    MatCardModule
+  ],
   template: `
-    <app-sidebar></app-sidebar>
-    <router-outlet></router-outlet>
+    <div class="flex h-screen overflow-hidden">
+      <app-sidebar class="w-20 flex-shrink-0"></app-sidebar>
+      <div class="flex-1 flex flex-col">
+        <router-outlet></router-outlet>
+      </div>
+    </div>
   `
 })
 export class AppComponent {
-title='frontend';
+  title = 'frontend';
 }

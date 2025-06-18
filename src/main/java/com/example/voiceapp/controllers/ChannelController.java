@@ -2,11 +2,13 @@ package com.example.voiceapp.controllers;
 
 import com.example.voiceapp.dtos.ChannelDTO;
 import com.example.voiceapp.dtos.CreateInviteDTO;
+import com.example.voiceapp.dtos.UserDTO;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 
 import com.example.voiceapp.service.ChannelService.ChannelService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,7 +65,18 @@ public class ChannelController {
     });
     return output;
   }
-
+  @GetMapping("/getUsers/{server}")
+  @ResponseStatus(HttpStatus.OK)
+  public DeferredResult<ResponseEntity<Set<UserDTO>>> getUsers(@PathVariable String server) {
+    DeferredResult<ResponseEntity<Set<UserDTO>>> output = new DeferredResult<>();
+    channelService.getUsers(server).thenAccept(members ->
+            output.setResult(new ResponseEntity<>(members, HttpStatus.OK))
+    ).exceptionally(
+            ex->{output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
+              return null;}
+    );
+    return output;
+  }
   @ExceptionHandler(AlreadyExistsException.class)
   public ResponseEntity<Map<String, String>> handleAlreadyExistsException(AlreadyExistsException e) {
     return new ResponseEntity<>(Map.of("Error", e.getMessage()), HttpStatus.CONFLICT);

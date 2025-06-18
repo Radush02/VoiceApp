@@ -1,116 +1,21 @@
-.sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 80px;
-    background-color: #2f3136;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 10px 0;
-  
-    .top {
-      margin-bottom: 20px;
-    }
-  
-    .create-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      font-size: 24px;
-      color: white;
-      background-color: #3ba55d;
-      border: none;
-      cursor: pointer;
-    }
-  
-    .server-list {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      overflow-y: auto;
-    }
-  
-    .server-item {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      overflow: hidden;
-      cursor: pointer;
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      .default-icon {
-        width: 100%;
-        height: 100%;
-        background-color: #4f545c;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 20px;
-      }
-    }
-  
-    .user-info {
-      margin-top: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-  
-      .avatar {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        margin-bottom: 5px;
-      }
-      .default-user {
-        background-color: #4f545c;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-      }
-  
-      .user-details {
-        text-align: center;
-        color: white;
-  
-        .username {
-          font-weight: bold;
-        }
-        .status {
-          font-size: 12px;
-          color: #b9bbbe;
-        }
-      }
-    }
-  }
-  .my-profile {
-    display: flex;
-    align-items: center;
-    padding: 8px;
-    cursor: pointer;
-  
-    .avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      margin-right: 8px;
-    }
-  
-    &:hover {
-      background: rgba(0,0,0,0.04);
-    }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
   }
   
-  :host {
-    display: block;
-    margin-left: 80px;
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
   }
   
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #4B5563;
+    border-radius: 2px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: #6B7280;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #4B5563 transparent;
+  }

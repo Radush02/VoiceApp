@@ -7,6 +7,7 @@ import { AuthGuard } from './guards/auth.guard';
 import { LoggedGuard } from './guards/logged.guard';
 import { DmComponent } from './components/dm/dm.component';
 import { FriendsGuard } from './guards/friends.guard';
+import { RegisterComponent } from './components/register/register.component';
 export const routes: Routes = [
     {path: '', redirectTo: '/login', pathMatch: 'full'},
     {path: 'chat', component: HomeComponent, canActivate: [AuthGuard]},
@@ -14,4 +15,5 @@ export const routes: Routes = [
     {path: 'create', component: ServerPopupComponent, canActivate: [AuthGuard]},
     {path: 'login', component: LoginComponent,canActivate:[LoggedGuard]},
     {path: "private/:recipient", component: DmComponent, canActivate: [AuthGuard,FriendsGuard]},
+    {path: 'register', component: RegisterComponent, canActivate: [LoggedGuard]},
 ];

@@ -26,7 +26,7 @@ export class UserProfilePopupComponent {
   selectedImage: File | null = null;
   pendingRequests: string[] = [];
   RequestResponse = RequestResponse;
-
+  isFriend: boolean = false;
   constructor(
     private dialogRef: MatDialogRef<UserProfilePopupComponent>,
     @Inject(MAT_DIALOG_DATA) public user: UserDTO | PublicUserDTO,
@@ -36,7 +36,18 @@ export class UserProfilePopupComponent {
       this.channelsCount = (this.user as UserDTO).channels.length;
       this.requestsCount = (this.user as UserDTO).requests.length;
       this.fetchPendingRequests();
-
+    }
+    else {
+      this.channelsCount = null;
+      this.requestsCount = null;
+      this.userService.areFriends(this.user.username).subscribe(
+        (response) => {
+          this.isFriend = response.isFriend;
+        },
+        (error) => {
+          console.error('Error checking friendship status:', error);
+        }
+      );
     }
   }
 

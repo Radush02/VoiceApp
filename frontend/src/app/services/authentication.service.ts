@@ -15,8 +15,10 @@ export class AuthenticationService {
     return this.http.post(`${this.apiLink}/login`, {username:username, password },{ withCredentials: true });
   }
 
-  register(username: string, password: string,email: string): Observable<any> {
-    return this.http.post(`${this.apiLink}/register`, { username, password,email },{ withCredentials: true });
+  register(username: string, password: string,email: string,imageLink?:string): Observable<any> {
+    if( !imageLink ) 
+      imageLink = 'https://png.pngtree.com/element_our/20200610/ourmid/pngtree-character-default-avatar-image_2237203.jpg';
+    return this.http.post(`${this.apiLink}/register`, { username, password,email,imageLink },{ withCredentials: true });
   }
 
   logout() {
@@ -37,4 +39,5 @@ export class AuthenticationService {
       catchError(() => of('')) 
     );
   }
+
 }

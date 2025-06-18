@@ -11,15 +11,26 @@ export class ChannelService {
   
   constructor(private http: HttpClient) {}
 
-  createChannel(name: string, vanityId: string, photo?: File): Observable<any> {
-    return this.http.post(`${this.apiLink}/create`, { name, vanityId, photo });
+createChannel(name: string, vanityId: string, photo?: File): Observable<any> {
+  const formData = new FormData();
+  formData.append('name', name);
+  formData.append('vanityId', vanityId);
+  if (photo) {
+    formData.append('photo', photo);
   }
 
+  return this.http.post(`${this.apiLink}/create`, formData,{withCredentials:true});
+}
+
   createInviteLink(vanityId:string,maxUses:number,expriesInMinutes:number): Observable<any> {
-    return this.http.post(`${this.apiLink}/create-invite`, { vanityId, maxUses, expriesInMinutes });
+    return this.http.post(`${this.apiLink}/create-invite`, { vanityId, maxUses, expriesInMinutes },{withCredentials:true});
   }
 
   joinChannel(vanityId: string): Observable<any> {
-    return this.http.post(`${this.apiLink}/join/${vanityId}`, {});
+    return this.http.post(`${this.apiLink}/join/${vanityId}`, {withCredentials:true});
+  }
+
+  getMembers(vanityId: string): Observable<any> {
+    return this.http.get(`${this.apiLink}/getUsers/${vanityId}`,{withCredentials:true});
   }
 }

@@ -1,9 +1,15 @@
 package com.example.voiceapp.security;
 
 import com.example.voiceapp.util.JwtUtil;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -20,6 +26,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import jakarta.servlet.DispatcherType;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
 
 @Configuration
 @EnableWebSecurity
@@ -37,7 +46,8 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(authz -> authz
                     .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
-                    .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/logout","api/auth/refresh").permitAll()
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/logout","/api/auth/refresh").permitAll()
                     .anyRequest().authenticated()
             )
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -51,16 +61,15 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.addAllowedOrigin("https://192.168.1.200:4200");
+    configuration.addAllowedOriginPattern("https://192.168.1.200:4200");
+    configuration.setAllowCredentials(true);
     configuration.addAllowedMethod("*");
     configuration.addAllowedHeader("*");
-    configuration.setAllowCredentials(true);
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", configuration);
     return source;
   }
-
   @Bean
   public AuthenticationManager authenticationManager(
       AuthenticationConfiguration authenticationConfiguration) throws Exception {
@@ -79,4 +88,19 @@ public class SecurityConfig {
     daoAuthenticationProvider.setPasswordEncoder(bCryptPasswordEncoder());
     return daoAuthenticationProvider;
   }
+  @Bean
+  public FilterRegistrationBean<OncePerRequestFilter> logFilter() {
+    FilterRegistrationBean<OncePerRequestFilter> reg = new FilterRegistrationBean<>();
+    reg.setFilter(new OncePerRequestFilter() {
+      @Override
+      protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+              throws ServletException, IOException {
+        System.out.println("Incoming request: " + request.getMethod() + " " + request.getRequestURI());
+        filterChain.doFilter(request, response);
+      }
+    });
+    reg.setOrder(1);
+    return reg;
+  }
+
 }

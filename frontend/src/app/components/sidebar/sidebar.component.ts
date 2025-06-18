@@ -7,6 +7,7 @@ import { ServerPopupComponent } from '../server-popup/server-popup.component';
 import { RouterModule } from '@angular/router';
 import { UserProfilePopupComponent } from '../user-profile-popup/user-profile-popup.component';
 import { MatDialog } from '@angular/material/dialog';
+import { AuthenticationService } from '../../services/authentication.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -18,8 +19,10 @@ export class SidebarComponent {
   channels: Channel[] = [];
   user: UserDTO | null = null;
   showCreatePopup = false;
-
-  constructor(private userService: UserService,    private dialog: MatDialog
+  isLoggedIn = false;
+  constructor(private userService: UserService,    
+    private dialog: MatDialog,
+    private authenticationService: AuthenticationService
   ) {}
 
   ngOnInit() {
@@ -55,6 +58,29 @@ export class SidebarComponent {
   closeCreatePopup() {
     this.showCreatePopup = false;
   }
-  
+  trackByChannelId(index: number, channel: Channel): string {
+  return channel.id;
+}
+
+getServerInitial(serverName: string): string {
+  return serverName.charAt(0).toUpperCase();
+}
+
+getUserInitial(username: string): string {
+  return username.charAt(0).toUpperCase();
+}
+
+onImageError(event: any, channel: Channel): void {
+  event.target.style.display = 'none';
+}
+
+onUserImageError(event: any): void {
+  event.target.style.display = 'none';
+}
+  setLoggedIn(): void {
+    this.authenticationService.loggedIn().subscribe((loggedIn: boolean) => {
+      this.isLoggedIn = loggedIn;
+    });
+  }
 }
 

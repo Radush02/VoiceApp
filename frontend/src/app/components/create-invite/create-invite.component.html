@@ -1,20 +1,183 @@
-<mat-card>
-    <mat-card-header>
-        <mat-card-title>Create Invite</mat-card-title>
-    </mat-card-header>
+<div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" (click)="close()">
+  <div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md overflow-hidden" (click)="$event.stopPropagation()">
     
-    <mat-card-content>
-        <form [formGroup]="inviteForm" (ngSubmit)="onSubmit()">
-        <mat-form-field appearance="fill">
-            <mat-label>Amount of uses:</mat-label>
-            <input matInput formControlName="uses" type="number" min="1" required>
-        </mat-form-field>
-    
-        <button mat-raised-button color="primary" type="submit">Create Invite</button>
-        </form>
-    </mat-card-content>
-    
-    <mat-card-actions align="end">
-        <button mat-button (click)="close()">Close</button>
-    </mat-card-actions>
-</mat-card>
+    <div class="bg-gradient-to-r from-purple-600 to-pink-600 p-5">
+      <div class="flex items-center justify-between">
+        <h2 class="text-white text-xl font-bold">Create Invite Link</h2>
+        <button 
+          (click)="close()"
+          class="text-white/80 hover:text-white transition-colors duration-200"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+        <div class="p-6">
+      <div *ngIf="errorMessage" class="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+        <div class="flex items-center">
+          <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span class="text-red-300 text-sm">{{ errorMessage }}</span>
+        </div>
+      </div>
+      
+      <form (ngSubmit)="createInviteLink()">
+        <div class="mb-5" *ngIf="!vanityId">
+          <label class="block text-sm font-medium text-gray-200 mb-2">
+            Select Server
+          </label>
+          <div class="relative">
+            <select 
+              [(ngModel)]="vanityId" 
+              name="vanityId"
+              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+              required
+            >
+              <option value="" disabled selected>Select a server</option>
+              <option *ngFor="let server of servers" [value]="server.vanityId">{{ server.name }}</option>
+            </select>
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+                <div class="mb-5">
+          <label class="block text-sm font-medium text-gray-200 mb-2">
+            Maximum Uses
+          </label>
+          <div class="relative">
+            <input
+              type="number"
+              [(ngModel)]="maxUses"
+              name="maxUses"
+              min="0"
+              max="100"
+              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+              placeholder="Number of times this invite can be used"
+              required
+            />
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+            </div>
+          </div>
+          <p class="mt-1 text-xs text-gray-400">Set to 0 for unlimited uses</p>
+        </div>
+                <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-200 mb-2">
+            Expires After (minutes)
+          </label>
+          <div class="relative">
+            <input
+              type="number"
+              [(ngModel)]="expiresInMinutes"
+              name="expiresInMinutes"
+              min="0"
+              class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+              placeholder="How long the invite will be valid"
+              required
+            />
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+          </div>
+          <p class="mt-1 text-xs text-gray-400">Set to 0 for a permanent invite</p>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-2 mb-6">
+          <button 
+            type="button"
+            (click)="setExpiration(30)"
+            class="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors duration-200"
+          >
+            30 min
+          </button>
+          <button 
+            type="button"
+            (click)="setExpiration(60)"
+            class="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors duration-200"
+          >
+            1 hour
+          </button>
+          <button 
+            type="button"
+            (click)="setExpiration(1440)"
+            class="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors duration-200"
+          >
+            1 day
+          </button>
+        </div>
+        
+        <button
+          type="submit"
+          [disabled]="isLoading || !isFormValid()"
+          class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:scale-100 disabled:cursor-not-allowed flex items-center justify-center"
+        >
+          <span *ngIf="!isLoading">Create Invite Link</span>
+          <div *ngIf="isLoading" class="flex items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Creating...
+          </div>
+        </button>
+      </form>
+            <div *ngIf="generatedLink" class="mt-6 p-4 bg-gray-700/50 rounded-lg">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-white font-medium">Your Invite Link</h3>
+          <button 
+            (click)="copyLink()"
+            class="text-gray-400 hover:text-white transition-colors duration-200"
+            [title]="copied ? 'Copied!' : 'Copy to clipboard'"
+          >
+            <svg *ngIf="!copied" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+            </svg>
+            <svg *ngIf="copied" class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="flex items-center bg-gray-800 rounded-lg p-2 overflow-hidden">
+          <input 
+            type="text" 
+            [value]="generatedLink" 
+            class="bg-transparent text-white text-sm flex-1 outline-none overflow-ellipsis"
+            readonly
+            #linkInput
+          />
+        </div>
+        <div class="mt-2 flex items-center justify-between text-xs text-gray-400">
+          <span>{{ maxUses === 0 ? 'Unlimited uses' : maxUses + ' uses' }}</span>
+          <span>{{ expiresInMinutes === 0 ? 'Never expires' : 'Expires in ' + formatExpiration() }}</span>
+        </div>
+      </div>
+      
+      <div class="mt-4 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+        <div class="flex items-start">
+          <svg class="w-4 h-4 text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span class="text-blue-300 text-xs">Only server administrators can create invite links.</span>
+        </div>
+      </div>
+    </div>
+        <div class="border-t border-gray-700 p-4 flex justify-end">
+      <button 
+        (click)="close()"
+        class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
+      >
+        Close
+      </button>
+    </div>
+  </div>
+</div>

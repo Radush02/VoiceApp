@@ -19,10 +19,7 @@ public class WebSocketEventListener {
     public void handleWebSocketConnectListener(SessionConnectEvent event) {
         if (event.getUser() != null) {
             String username = event.getUser().getName();
-            System.out.println("CONNECTED: " + username);
             presenceService.setUserStatus(username, true);
-        } else {
-            System.out.println("NO PRINCIPAL in connect event");
         }
     }
 

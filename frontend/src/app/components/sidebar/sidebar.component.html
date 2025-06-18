@@ -1,45 +1,103 @@
-<div class="sidebar">
-    <div class="top">
-      <button class="create-btn" [routerLink]="['/chat']">🏠</button>
-    </div>
-  
-    <div class="server-list">
-      <ng-container *ngFor="let ch of channels">
-        <div class="server-item" [title]="ch.name" [routerLink]="['/chat', ch.vanityId]">
-          <img
-            *ngIf="ch.imageLink; else letterIcon"
-            [src]="ch.imageLink"
-            [alt]="ch.name"
-          />
-          <ng-template #letterIcon>
-            <div class="default-icon">{{ ch.name.charAt(0) }}</div>
-          </ng-template>
-        </div>
-      </ng-container>
-    </div>
-  
-    <ng-container *ngIf="user as u">
-      <div class="user-info">
-        <img
-          *ngIf="u.imageLink; else userLetter"
-          [src]="u.imageLink"
-          [alt]="u.username"
-          class="avatar"
-        />
-        <ng-template #userLetter>
-          <div class="avatar default-user">{{ u.username.charAt(0) }}</div>
-        </ng-template>
 
-        <div class="user-details"  (click)="openProfilePopup()">
-          <div class="username">{{ u.username }}</div>
-          <div class="status">{{ u.status }}</div>
-        </div>
+  <div class="flex flex-col h-screen bg-gray-900 border-r border-gray-800 w-20">
+  <div class="flex flex-col items-center py-3">
+    <button
+      routerLink="/chat"
+      routerLinkActive="bg-purple-600"
+      class="w-12 h-12 bg-gray-700 hover:bg-purple-500 rounded-2xl hover:rounded-xl transition-all duration-200 flex items-center justify-center group relative"
+      title="Home"
+    >
+      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+      </svg>
+      
+      <div class="absolute left-16 bg-gray-800 text-white text-sm px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+        Home
       </div>
-    </ng-container>
-  
-    <app-server-popup
-      *ngIf="showCreatePopup"
-      (close)="closeCreatePopup()">
-    </app-server-popup>
+    </button>
   </div>
-  
+
+  <div class="mx-3 h-px bg-gray-700 mb-2"></div>
+
+  <div class="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent px-3">
+    <div class="space-y-2">
+      <div *ngFor="let channel of channels; trackBy: trackByChannelId" class="flex justify-center">
+        <button
+          [routerLink]="['/chat', channel.vanityId]"
+          routerLinkActive="bg-purple-600"
+          class="w-12 h-12 bg-gray-700 hover:bg-purple-500 rounded-2xl hover:rounded-xl transition-all duration-200 flex items-center justify-center group relative overflow-hidden"
+          [title]="channel.name"
+        >
+          <div *ngIf="channel.imageLink; else serverInitial" class="w-full h-full">
+            <img 
+              [src]="channel.imageLink" 
+              [alt]="channel.name"
+              class="w-full h-full object-cover"
+              (error)="onImageError($event, channel)"
+            />
+          </div>
+          
+          <ng-template #serverInitial>
+            <span class="text-white font-semibold text-lg">
+              {{ getServerInitial(channel.name) }}
+            </span>
+          </ng-template>
+
+          <div class="absolute -left-1 top-1/2 transform -translate-y-1/2 w-1 bg-white rounded-r-full transition-all duration-200 opacity-0 group-hover:opacity-100 h-5 group-hover:h-8"></div>
+        
+          <div class="absolute left-16 bg-gray-800 text-white text-sm px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+            {{ channel.name }}
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="px-3 pb-3">
+    <button
+      (click)="openCreatePopup()"
+      class="w-12 h-12 bg-gray-700 hover:bg-green-500 rounded-2xl hover:rounded-xl transition-all duration-200 flex items-center justify-center group relative"
+      title="Create Server"
+    >
+      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+      </svg>
+
+      <div class="absolute left-16 bg-gray-800 text-white text-sm px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+        Create Server
+      </div>
+    </button>
+  </div>
+
+  <div class="border-t border-gray-800 p-3" *ngIf="user">
+    <button
+      (click)="openProfilePopup()"
+      class="w-12 h-12 bg-gray-700 hover:bg-gray-600 rounded-full transition-all duration-200 flex items-center justify-center group relative overflow-hidden"
+      [title]="user.username"
+    >
+      <div *ngIf="user.imageLink; else userInitial" class="w-full h-full">
+        <img 
+          [src]="user.imageLink" 
+          [alt]="user.username"
+          class="w-full h-full object-cover rounded-full"
+          (error)="onUserImageError($event)"
+        />
+      </div>
+      
+      <ng-template #userInitial>
+        <span class="text-white font-semibold text-lg">
+          {{ getUserInitial(user.username) }}
+        </span>
+      </ng-template>
+      <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-gray-900 rounded-full"></div>
+    
+      <div class="absolute left-16 bottom-0 bg-gray-800 text-white text-sm px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+        {{ user.username }}
+      </div>
+    </button>
+  </div>
+  <app-server-popup 
+    *ngIf="showCreatePopup" 
+    (close)="closeCreatePopup()"
+    class="fixed inset-0 z-50">
+  </app-server-popup>
+</div>

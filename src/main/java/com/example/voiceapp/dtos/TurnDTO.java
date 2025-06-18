@@ -5,14 +5,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-public class RegisterDTO {
+import java.util.List;
 
-  private String username;
-  private String password;
-  private String email;
-  private String imageLink;
+@Setter
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor
+public class TurnDTO {
+    private String username;
+    private String credential;
+    private List<String> urls;
 }

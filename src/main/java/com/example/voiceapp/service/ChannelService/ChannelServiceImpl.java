@@ -7,6 +7,7 @@ import com.example.voiceapp.collection.Invite;
 import com.example.voiceapp.collection.User;
 import com.example.voiceapp.dtos.ChannelDTO;
 import com.example.voiceapp.dtos.CreateInviteDTO;
+import com.example.voiceapp.dtos.UserDTO;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.exceptions.NotPermittedException;
@@ -16,9 +17,7 @@ import com.example.voiceapp.repository.UserRepository;
 import com.example.voiceapp.service.AuthService.AuthServiceImpl;
 
 import java.io.IOException;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import com.example.voiceapp.service.S3Service.S3ServiceImpl;
@@ -116,6 +115,24 @@ public class ChannelServiceImpl implements ChannelService {
     inviteRepository.save(invite);
 
     return CompletableFuture.completedFuture(Map.of("Server", channel.getVanityId()));
+  }
+
+  @Override
+  public CompletableFuture<Set<UserDTO>> getUsers(String channel) {
+    Channel ch = channelRepository.findByVanityId(channel).orElseThrow(() -> new NonExistentException("Channel not found"));
+    Set<String> members = ch.getMembers();
+    Set<UserDTO> users = new HashSet<>();
+    for (String member : members) {
+      User u = userRepository.findByUsernameIgnoreCase(member).orElseThrow(() -> new NonExistentException("User not found"));
+      UserDTO userDTO = new UserDTO();
+      userDTO.setUsername(u.getUsername());
+      userDTO.setStatus(u.getStatus());
+      userDTO.setAboutMe(u.getAboutMe());
+      userDTO.setImageLink(u.getImageLink());
+      userDTO.setChannels(u.getChannels());
+      users.add(userDTO);
+    }
+    return CompletableFuture.completedFuture(users);
   }
 
   public CompletableFuture<Map<String, String>> createInvite(CreateInviteDTO createInviteDTO) {
