@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
+import { NotificationPopupComponent } from './components/notification-popup/notification-popup.component';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule }   from '@angular/material/icon';
@@ -12,6 +13,7 @@ import { MatCardModule }   from '@angular/material/card';
   standalone: true,
   imports: [
     SidebarComponent,
+    NotificationPopupComponent,
     RouterOutlet,
     MatDialogModule,
     MatButtonModule,
@@ -25,6 +27,7 @@ import { MatCardModule }   from '@angular/material/card';
       <div class="flex-1 flex flex-col">
         <router-outlet></router-outlet>
       </div>
+      <app-notification-popup></app-notification-popup>
     </div>
   `
 })

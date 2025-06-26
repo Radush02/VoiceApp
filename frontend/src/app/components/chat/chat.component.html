@@ -31,9 +31,9 @@
       <div class="max-w-xs md:max-w-sm rounded-2xl p-3 bg-white/10 backdrop-blur border border-white/10">
         <div (click)="openProfilePopup(message.sender)" class="text-xs text-gray-300 mb-1">{{ message.sender }}</div>
 
-        <div *ngIf="message.content" class="text-sm text-white break-words">
-          {{ message.content }}
-        </div>
+      <div *ngIf="message.content" class="text-sm text-white break-words" 
+          [innerHTML]="message.content | mentionHighlight">
+      </div>
 
         <div *ngIf="message.attachment" class="mt-2">
           <ng-container *ngIf="isImage(message.attachment)">

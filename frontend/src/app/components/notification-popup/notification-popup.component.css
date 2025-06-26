@@ -1,0 +1,17 @@
+.notification-container {
+  background-color: #2C2F33;
+  border: 1px solid rgba(147, 51, 234, 0.3);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  max-width: 24rem;
+  min-width: 20rem;
+}
+
+.notification-container:hover {
+  background-color: #36393F;
+  border-color: rgba(147, 51, 234, 0.5);
+}

@@ -13,6 +13,7 @@ public class UserHandshakeHandler extends DefaultHandshakeHandler {
                                       WebSocketHandler wsHandler,
                                       Map<String, Object> attributes) {
         String username = (String) attributes.get("username");
-        return () -> username;
+        System.out.println("Handshake user: " + username);
+        return ()->username;
     }
 }

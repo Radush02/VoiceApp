@@ -94,11 +94,11 @@ public class UserServiceImpl implements UserService {
     userRepository.save(invitedUser);
 
     messagingTemplate.convertAndSendToUser(
-            invitedUser.getUsername(), "/queue/friend-requests",
+            invitedUser.getUsername(), "/queue/notifications",
             Map.of("from", user.getUsername())
     );
     NotificationDTO notif=new NotificationDTO(NotificationType.FRIEND_REQUEST,"Friend request from "+user.getUsername());
-    messagingTemplate.convertAndSendToUser(invitedUser.getUsername(), "/queue/friend-requests", notif);
+    messagingTemplate.convertAndSendToUser(invitedUser.getUsername(), "/queue/notifications", notif);
     return CompletableFuture.completedFuture(Map.of("Response", "Friend request sent!"));
   }
   @Override

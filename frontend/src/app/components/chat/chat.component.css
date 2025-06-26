@@ -18,3 +18,15 @@
   .bg-gray-750 {
     background-color: #374151;
   }
+  .mention {
+  background-color: #3e8ed0; 
+  color: #ffffff;
+  font-weight: bold;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer; 
+}
+
+.mention:hover {
+  background-color: #337ab7;
+}

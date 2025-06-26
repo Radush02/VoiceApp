@@ -71,6 +71,13 @@ export class WebsocketService {
       this.pendingSubscriptions.push(channel);
     }
   }
+  public subscribeToUserQueue(destination: string, callback: (data: any) => void): void {
+    this.onConnect(() => {
+      this.stompClient.subscribe(destination, message => {
+        callback(JSON.parse(message.body));
+      });
+    });
+  }
 
   public sendMessage(channel: string, message: any) {
     if (this.stompClient && this.stompClient.connected) {

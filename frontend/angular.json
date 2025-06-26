@@ -63,8 +63,8 @@
             "host": "0.0.0.0",
             "port": 4200,
             "ssl": true,
-            "sslCert": "ssl/192.168.1.200.pem",
-            "sslKey": "ssl/192.168.1.200-key.pem"
+            "sslCert": "ssl/cert.pem",
+            "sslKey": "ssl/key.pem"
           },
           "configurations": {
             "production": {

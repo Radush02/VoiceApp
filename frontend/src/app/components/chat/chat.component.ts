@@ -23,12 +23,13 @@ import { ServerMembersPopupComponent } from "../server-members-popup/server-memb
 import { MatDialog } from "@angular/material/dialog";
 import { UserProfilePopupComponent } from '../user-profile-popup/user-profile-popup.component';
 import { UserService } from "../../services/user.service";
+import { MentionHighlightPipe } from "../../pipes/mention-highlight.pipe";
 
 @Component({
   selector: "app-chat",
   templateUrl: "./chat.component.html",
   styleUrls: ["./chat.component.css"],
-  imports: [FormsModule, CommonModule,ServerMembersPopupComponent],
+  imports: [FormsModule, CommonModule,ServerMembersPopupComponent,MentionHighlightPipe],
   standalone: true,
 })
 export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {

@@ -1,6 +1,9 @@
 package com.example.voiceapp.collection;
 
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
@@ -17,4 +20,5 @@ public class Message {
   private String content;
   private String attachment;
   private Date date;
+  private Set<String> mentions = new HashSet<>();
 }
