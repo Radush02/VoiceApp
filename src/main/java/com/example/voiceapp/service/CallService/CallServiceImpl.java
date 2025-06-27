@@ -40,6 +40,29 @@ public class CallServiceImpl implements CallService {
         return active;
     }
 
+    /**
+     * Atomically attempts to join a call and returns whether this user should be the initiator.
+     * Returns true if this user becomes the initiator (first to join), false if joining existing call.
+     */
+    public boolean attemptJoinCall(String channel, String username) {
+        final boolean[] isInitiator = {false};
+        
+        activeCallers.compute(channel, (chan, existingSet) -> {
+            if (existingSet == null) {
+                // No call exists, this user becomes initiator
+                existingSet = Collections.synchronizedSet(new HashSet<>());
+                existingSet.add(username);
+                isInitiator[0] = true;
+            } else {
+                // Call exists, this user joins as participant
+                existingSet.add(username);
+                isInitiator[0] = false;
+            }
+            return existingSet;
+        });
+        
+        return isInitiator[0];
+    }
 
     public Set<String> getCurrentCallers(String channel) {
         Set<String> set = activeCallers.get(channel);

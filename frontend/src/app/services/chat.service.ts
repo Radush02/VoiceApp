@@ -30,4 +30,12 @@ export class ChatService {
       `${environment.apiUrl}/call/${channel}/status`
     , { withCredentials: true });
   }
+
+  public joinCall(channel: string): Observable<{ isInitiator: boolean }> {
+    return this.http.post<{ isInitiator: boolean }>(
+      `${environment.apiUrl}/call/${channel}/join`,
+      {},
+      { withCredentials: true }
+    );
+  }
 }

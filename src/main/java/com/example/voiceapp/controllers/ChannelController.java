@@ -1,5 +1,6 @@
 package com.example.voiceapp.controllers;
 
+import com.example.voiceapp.dtos.AdminActionDTO;
 import com.example.voiceapp.dtos.ChannelDTO;
 import com.example.voiceapp.dtos.CreateInviteDTO;
 import com.example.voiceapp.dtos.UserDTO;
@@ -77,6 +78,21 @@ public class ChannelController {
     );
     return output;
   }
+  @PostMapping("/admin/action")
+  public DeferredResult<ResponseEntity<Map<String, String>>> handleAdminAction(@RequestBody AdminActionDTO action) {
+    DeferredResult<ResponseEntity<Map<String, String>>> result = new DeferredResult<>();
+    channelService.handleAdminAction(action)
+            .thenAccept(response -> result.setResult(ResponseEntity.ok(response)))
+            .exceptionally(ex -> {
+              result.setErrorResult(
+                      ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                              .body(Map.of("error", "Action failed: " + ex.getMessage()))
+              );
+              return null;
+            });
+    return result;
+  }
+
   @ExceptionHandler(AlreadyExistsException.class)
   public ResponseEntity<Map<String, String>> handleAlreadyExistsException(AlreadyExistsException e) {
     return new ResponseEntity<>(Map.of("Error", e.getMessage()), HttpStatus.CONFLICT);

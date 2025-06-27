@@ -1,10 +1,12 @@
 package com.example.voiceapp.service.ChannelService;
 
+import com.example.voiceapp.Enum.Action;
 import com.example.voiceapp.Enum.Role;
 import com.example.voiceapp.collection.Channel;
 import com.example.voiceapp.collection.ChannelMembership;
 import com.example.voiceapp.collection.Invite;
 import com.example.voiceapp.collection.User;
+import com.example.voiceapp.dtos.AdminActionDTO;
 import com.example.voiceapp.dtos.ChannelDTO;
 import com.example.voiceapp.dtos.CreateInviteDTO;
 import com.example.voiceapp.dtos.UserDTO;
@@ -35,31 +37,45 @@ public class ChannelServiceImpl implements ChannelService {
   @Autowired private InviteRepository inviteRepository;
   @Autowired private S3ServiceImpl s3Service;
 
-  
+
   @Override
   public CompletableFuture<Map<String, String>> createChannel(ChannelDTO channel) throws IOException {
-    User u =
-        userRepository
+    User u = userRepository
             .findByUsernameIgnoreCase(authService.extractUsername())
             .orElseThrow(() -> new NonExistentException("User not found"));
+
     if (channelRepository.existsByName(channel.getName())) {
-      throw new AlreadyExistsException(
-          "Channel with name " + channel.getName() + " already exists");
+      throw new AlreadyExistsException("Channel with name " + channel.getName() + " already exists");
     }
+
     Channel newChannel = new Channel();
     newChannel.setName(channel.getName());
     newChannel.setVanityId(channel.getVanityId());
     newChannel.setCreatedBy(authService.extractUsername());
-    newChannel.getMembers().add(authService.extractUsername());
-    u.getChannels().add(new ChannelMembership(newChannel.getVanityId(), Role.ADMIN,new Date()));
-    String fileName = channel.getVanityId() + "." + StringUtils.getFilenameExtension(channel.getFile().getOriginalFilename());
-    return s3Service.uploadFile(fileName, channel.getFile())
-            .thenApply(imageUrl -> {
-              newChannel.setImageLink(imageUrl);
-              channelRepository.save(newChannel);
-              userRepository.save(u);
-              return Map.of("Created", newChannel.getVanityId());
-            });
+    newChannel.getMembers().put(authService.extractUsername(), Role.ADMIN);
+    u.getChannels().add(new ChannelMembership(newChannel.getVanityId(), Role.ADMIN, new Date()));
+
+    String fileName = channel.getVanityId() + "." +
+            StringUtils.getFilenameExtension(channel.getFile().getOriginalFilename());
+
+    CompletableFuture<Map<String, String>> future;
+    try {
+      future = s3Service.uploadFile(fileName, channel.getFile())
+              .thenApply(imageUrl -> {
+                newChannel.setImageLink(imageUrl);
+                return saveChannelAndReturn(newChannel, u);
+              });
+    } catch (Exception e) {
+      future = CompletableFuture.completedFuture(saveChannelAndReturn(newChannel, u));
+    }
+
+    return future;
+  }
+
+  private Map<String, String> saveChannelAndReturn(Channel newChannel, User u) {
+    channelRepository.save(newChannel);
+    userRepository.save(u);
+    return Map.of("Created", newChannel.getVanityId());
   }
 
   
@@ -95,16 +111,16 @@ public class ChannelServiceImpl implements ChannelService {
     boolean alreadyInChannel =
         user.getChannels().stream().anyMatch(cm -> cm.getVanityId().equals(channel.getVanityId()));
     if (alreadyInChannel) {
-      return CompletableFuture.completedFuture(Map.of("Server", channel.getVanityId()));
+      throw new AlreadyExistsException("You have already joined the channel.");
     }
 
     user.getChannels().add(new ChannelMembership(channel.getVanityId(), Role.USER,new Date()));
     userRepository.save(user);
 
     if (channel.getMembers() == null) {
-      channel.setMembers(new HashSet<>());
+      channel.setMembers(new HashMap<>());
     }
-    channel.getMembers().add(user.getUsername());
+    channel.getMembers().put(user.getUsername(),Role.USER);
     channelRepository.save(channel);
 
     if (invite.getUses() == null) {
@@ -120,21 +136,33 @@ public class ChannelServiceImpl implements ChannelService {
   @Override
   public CompletableFuture<Set<UserDTO>> getUsers(String channel) {
     Channel ch = channelRepository.findByVanityId(channel).orElseThrow(() -> new NonExistentException("Channel not found"));
-    Set<String> members = ch.getMembers();
+    Map<String,Role> members = ch.getMembers();
+    if(!members.containsKey(authService.extractUsername())){
+      throw new NonExistentException("You're not a member.");
+    }
     Set<UserDTO> users = new HashSet<>();
-    for (String member : members) {
-      User u = userRepository.findByUsernameIgnoreCase(member).orElseThrow(() -> new NonExistentException("User not found"));
-      UserDTO userDTO = new UserDTO();
-      userDTO.setUsername(u.getUsername());
-      userDTO.setStatus(u.getStatus());
-      userDTO.setAboutMe(u.getAboutMe());
-      userDTO.setImageLink(u.getImageLink());
-      userDTO.setChannels(u.getChannels());
-      users.add(userDTO);
+    for (Map.Entry<String, Role> entry : members.entrySet()) {
+      String member = entry.getKey();
+      Role role = entry.getValue();
+
+      User u = userRepository.findByUsernameIgnoreCase(member)
+              .orElseThrow(() -> new NonExistentException("User not found"));
+
+      UserDTO dto = new UserDTO();
+      dto.setUsername(u.getUsername());
+      dto.setStatus(u.getStatus());
+      dto.setAboutMe(u.getAboutMe());
+      dto.setImageLink(u.getImageLink());
+      dto.setChannels(u.getChannels());
+      dto.setFriends(u.getFriends());
+      dto.setRequests(u.getRequests());
+      dto.setRole(role);
+      users.add(dto);
     }
     return CompletableFuture.completedFuture(users);
   }
 
+  @Override
   public CompletableFuture<Map<String, String>> createInvite(CreateInviteDTO createInviteDTO) {
     User u =
         userRepository
@@ -167,5 +195,81 @@ public class ChannelServiceImpl implements ChannelService {
     }
     inviteRepository.save(invite);
     return CompletableFuture.completedFuture(Map.of("Server", inviteId));
+  }
+
+  @Override
+  public CompletableFuture<Map<String, String>> handleAdminAction(AdminActionDTO action) {
+    User admin = getUserByUsername(action.getAdmin());
+    Channel channel = getChannelIfAdmin(action.getVanityId(), admin.getUsername());
+    if(Objects.equals(admin.getUsername(), channel.getVanityId())) {
+      throw new NotPermittedException("Can't do any action on the owner.");
+    }
+    User target = getUserByUsername(action.getUser());
+
+    switch (action.getAction()) {
+      case KICK -> kickUserFromChannel(target, channel);
+      case BAN -> {
+        channel.getBannedMembers().add(target.getUsername());
+        kickUserFromChannel(target, channel);
+      }
+      case UNBAN -> channel.getBannedMembers().remove(target.getUsername());
+      case MUTE -> muteUser(channel, target, action.getMutedMinutes());
+      case UNMUTE -> channel.getMutedMembers().remove(target.getUsername());
+      default -> throw new IllegalArgumentException("Invalid action");
+    }
+
+    channelRepository.save(channel);
+    if (action.getAction() == Action.KICK || action.getAction() == Action.BAN) {
+      userRepository.save(target);
+    }
+
+    return CompletableFuture.completedFuture(Map.of(
+            "Server", buildActionMessage(admin.getUsername(), action.getAction(), target.getUsername())
+    ));
+  }
+
+  private void kickUserFromChannel(User user, Channel channel) {
+    boolean removed = user.getChannels().removeIf(
+            membership -> membership.getVanityId().equals(channel.getVanityId())
+    );
+    if (!removed) {
+      throw new NonExistentException("User is not a member of the channel");
+    }else{
+      channel.getMembers().remove(user.getUsername());
+    }
+  }
+
+  private void muteUser(Channel channel, User user, Integer mutedMinutes) {
+    if (mutedMinutes == null || mutedMinutes <= 0) {
+      throw new IllegalArgumentException("Muted minutes must be a positive integer");
+    }
+    long muteMillis = mutedMinutes * 60L * 1000L;
+    Date expiry = new Date(System.currentTimeMillis() + muteMillis);
+    channel.getMutedMembers().put(user.getUsername(), expiry);
+  }
+
+  private User getUserByUsername(String username) {
+    return userRepository.findByUsernameIgnoreCase(username)
+            .orElseThrow(() -> new NonExistentException("User not found"));
+  }
+
+  private Channel getChannelIfAdmin(String vanityId, String adminUsername) {
+    Channel channel = channelRepository.findByVanityId(vanityId)
+            .orElseThrow(() -> new NonExistentException("Channel not found"));
+    Role role = channel.getMembers().get(adminUsername);
+    if (role == null || role != Role.ADMIN) {
+      throw new NotPermittedException("User is not an admin");
+    }
+    return channel;
+  }
+
+  private String buildActionMessage(String admin, Action action, String target) {
+    return switch (action) {
+      case KICK -> admin + " kicked " + target;
+      case BAN -> admin + " banned " + target;
+      case UNBAN -> admin + " unbanned " + target;
+      case MUTE -> admin + " muted " + target;
+      case UNMUTE -> admin + " unmuted " + target;
+    };
   }
 }

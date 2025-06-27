@@ -1,5 +1,6 @@
 package com.example.voiceapp.dtos;
 
+import com.example.voiceapp.Enum.Role;
 import com.example.voiceapp.Enum.Status;
 import com.example.voiceapp.collection.ChannelMembership;
 import java.util.HashSet;
@@ -17,4 +18,5 @@ public class UserDTO {
   private Set<ChannelMembership> channels = new HashSet<>();
   private Set<String> friends = new HashSet<>();
   private Set<String> requests = new HashSet<>();
+  private Role role;
 }

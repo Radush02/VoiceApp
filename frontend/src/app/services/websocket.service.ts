@@ -125,6 +125,9 @@ export class WebsocketService {
       });
     }
   }
+  public unsubscribeFromChannel(destination: string): void {
+    this.stompClient?.unsubscribe(destination);
+  }
 
   public subscribeToTyping(channel: string, callback: (user: string) => void) {
     this.subscribe(`/channel/${channel}/typing`, (msg) => {

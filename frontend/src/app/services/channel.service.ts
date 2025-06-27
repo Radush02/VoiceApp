@@ -16,7 +16,7 @@ createChannel(name: string, vanityId: string, photo?: File): Observable<any> {
   formData.append('name', name);
   formData.append('vanityId', vanityId);
   if (photo) {
-    formData.append('photo', photo);
+    formData.append('file', photo);
   }
 
   return this.http.post(`${this.apiLink}/create`, formData,{withCredentials:true});

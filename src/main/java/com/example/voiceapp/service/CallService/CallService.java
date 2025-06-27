@@ -7,5 +7,6 @@ public interface CallService {
     void userLeft(String channel, String username);
     boolean isCallActive(String channel);
     Set<String> getCurrentCallers(String channel);
+    boolean attemptJoinCall(String channel, String username);
 
 }

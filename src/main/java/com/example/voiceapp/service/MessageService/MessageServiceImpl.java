@@ -39,8 +39,11 @@ public class MessageServiceImpl implements MessageService {
       Channel c = channelRepository.findByVanityId(channel)
               .orElseThrow(() -> new NonExistentException("Channel not found"));
 
-      if (!c.getMembers().contains(sender)) {
+      if (!c.getMembers().containsKey(sender)) {
         throw new NotPermittedException("You are not allowed to send a message in this channel.");
+      }
+      if (c.getMutedMembers().containsKey(sender) && c.getMutedMembers().get(sender).after(new Date())) {
+        throw new NotPermittedException("You are muted until " + c.getMutedMembers().get(sender));
       }
 
       message.setSender(sender);
@@ -54,7 +57,7 @@ public class MessageServiceImpl implements MessageService {
         Set<String> validMentions = mentionedUsernames.stream()
                 .filter(username -> !username.equals(sender))
                 .filter(username -> userRepository.findByUsername(username).isPresent())
-                .filter(username -> c.getMembers().contains(username))
+                .filter(username -> c.getMembers().containsKey(username))
                 .collect(Collectors.toSet());
 
         message.setMentions(validMentions);

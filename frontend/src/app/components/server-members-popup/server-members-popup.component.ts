@@ -85,11 +85,9 @@ export class ServerMembersPopupComponent implements OnInit {
     );
   }
 
-  getUserRole(member: UserDTO): 'ADMIN' | 'USER' {
-    if (member.username === this.currentUsername && this.isAdmin)
-      return 'ADMIN';
-    return 'USER';
-  }
+    getUserRole(member: UserDTO): 'ADMIN' | 'USER' {
+      return member.role || 'USER';
+    }
 
   isUserOnline(member: UserDTO): boolean {
     return member.status !== 'offline' && member.status !== 'invisible';
@@ -157,4 +155,5 @@ interface UserDTO {
   channels?: any[];
   friends?: string[];
   requests?: string[];
+  role?: 'ADMIN' | 'USER';
 }

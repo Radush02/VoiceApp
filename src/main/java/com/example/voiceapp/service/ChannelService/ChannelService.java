@@ -1,5 +1,6 @@
 package com.example.voiceapp.service.ChannelService;
 
+import com.example.voiceapp.dtos.AdminActionDTO;
 import com.example.voiceapp.dtos.ChannelDTO;
 import com.example.voiceapp.dtos.CreateInviteDTO;
 import com.example.voiceapp.dtos.UserDTO;
@@ -18,4 +19,6 @@ public interface ChannelService {
 
   CompletableFuture<Map<String, String>> joinChannel(String inviteCode);
   CompletableFuture<Set<UserDTO>> getUsers(String channel);
+
+  CompletableFuture<Map<String, String>> handleAdminAction(AdminActionDTO action);
 }

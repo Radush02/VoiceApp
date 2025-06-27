@@ -1,8 +1,8 @@
-<div class="flex flex-col h-full max-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-4 relative text-white overflow-hidden">
+<div class="flex flex-col h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-4 relative text-white overflow-hidden">
 
   <h2 
     (click)="openMembersPopup()" 
-    class="text-xl font-semibold mb-4 z-10 cursor-pointer hover:text-purple-300 transition-colors duration-200 flex items-center group"
+    class="text-xl font-semibold mb-4 z-10 cursor-pointer hover:text-purple-300 transition-colors duration-200 flex items-center group flex-shrink-0"
   >
     Chat in {{ channel }}
     <svg class="w-5 h-5 ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -10,7 +10,7 @@
     </svg>
   </h2>
 
-  <div *ngIf="typingUsers.size > 0" class="text-sm text-purple-300 italic mb-2 z-10">
+  <div *ngIf="typingUsers.size > 0" class="text-sm text-purple-300 italic mb-2 z-10 flex-shrink-0">
     <ng-container *ngIf="typingUsers.size === 1">
       {{ typingUsers.values().next().value }} is typing...
     </ng-container>
@@ -19,7 +19,7 @@
     </ng-container>
   </div>
 
-  <div class="flex-1 overflow-y-auto space-y-4 pr-1" #messagesContainer>
+  <div class="flex-1 overflow-y-auto space-y-4 pr-1 min-h-0" #messagesContainer>
     <div
       *ngFor="let message of messages"
       [ngClass]="{
@@ -31,9 +31,9 @@
       <div class="max-w-xs md:max-w-sm rounded-2xl p-3 bg-white/10 backdrop-blur border border-white/10">
         <div (click)="openProfilePopup(message.sender)" class="text-xs text-gray-300 mb-1">{{ message.sender }}</div>
 
-      <div *ngIf="message.content" class="text-sm text-white break-words" 
-          [innerHTML]="message.content | mentionHighlight">
-      </div>
+        <div *ngIf="message.content" class="text-sm text-white break-words" 
+            [innerHTML]="message.content | mentionHighlight">
+        </div>
 
         <div *ngIf="message.attachment" class="mt-2">
           <ng-container *ngIf="isImage(message.attachment)">
@@ -46,51 +46,51 @@
       </div>
     </div>
   </div>
-<div class="flex flex-wrap gap-4 mt-4">
-  <div
-    class="relative w-48 h-48 rounded-lg bg-black/40 border border-white/20 overflow-hidden cursor-pointer"
-    [class.w-full]="selectedStream === 'local'"
-    [class.h-auto]="selectedStream === 'local'"
-    (click)="selectStream('local')"
-  >
-    <video
-      #local
-      muted
-      autoplay
-      playsinline
-      *ngIf="isLocalCameraOn"
-      class="w-full h-full object-cover"
-    ></video>
-    <div *ngIf="!isLocalCameraOn" class="w-full h-full flex items-center justify-center text-5xl font-bold bg-gray-700">
-      {{ username.charAt(0).toUpperCase() }}
-    </div>
-    <div class="absolute bottom-0 w-full text-center text-sm bg-black/50 py-1">{{ username }}</div>
-  </div>
 
-  <ng-container *ngFor="let r of remoteStreams">
+  <div class="flex flex-wrap gap-4 mt-4 flex-shrink-0">
     <div
       class="relative w-48 h-48 rounded-lg bg-black/40 border border-white/20 overflow-hidden cursor-pointer"
-      [class.w-full]="selectedStream === r.peerId"
-      [class.h-auto]="selectedStream === r.peerId"
-      (click)="selectStream(r.peerId)"
+      [class.w-full]="selectedStream === 'local'"
+      [class.h-auto]="selectedStream === 'local'"
+      (click)="selectStream('local')"
     >
       <video
-        [id]="'remoteVideo_' + r.peerId"
+        #local
+        muted
         autoplay
         playsinline
-        *ngIf="r.cameraOn"
+        [style.display]="isLocalCameraOn ? 'block' : 'none'"
         class="w-full h-full object-cover"
       ></video>
-      <div *ngIf="!r.cameraOn" class="w-full h-full flex items-center justify-center text-5xl font-bold bg-gray-700">
-        {{ r.peerId.charAt(0).toUpperCase() }}
+      <div *ngIf="!isLocalCameraOn" class="w-full h-full flex items-center justify-center text-5xl font-bold bg-gray-700">
+        {{ username.charAt(0).toUpperCase() }}
       </div>
-      <div class="absolute bottom-0 w-full text-center text-sm bg-black/50 py-1">{{ r.peerId }}</div>
+      <div class="absolute bottom-0 w-full text-center text-sm bg-black/50 py-1">{{ username }}</div>
     </div>
-  </ng-container>
-</div>
 
+    <ng-container *ngFor="let r of remoteStreams">
+      <div
+        class="relative w-48 h-48 rounded-lg bg-black/40 border border-white/20 overflow-hidden cursor-pointer"
+        [class.w-full]="selectedStream === r.peerId"
+        [class.h-auto]="selectedStream === r.peerId"
+        (click)="selectStream(r.peerId)"
+      >
+        <video
+          [id]="'remoteVideo_' + r.peerId"
+          autoplay
+          playsinline
+          *ngIf="r.cameraOn"
+          class="w-full h-full object-cover"
+        ></video>
+        <div *ngIf="!r.cameraOn" class="w-full h-full flex items-center justify-center text-5xl font-bold bg-gray-700">
+          {{ r.peerId.charAt(0).toUpperCase() }}
+        </div>
+        <div class="absolute bottom-0 w-full text-center text-sm bg-black/50 py-1">{{ r.peerId }}</div>
+      </div>
+    </ng-container>
+  </div>
 
-  <div class="flex flex-wrap gap-2 mt-4">
+  <div class="flex flex-wrap gap-2 mt-4 flex-shrink-0">
     <button class="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg transition" (click)="call()">Start Call</button>
     <button class="bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg transition" (click)="endCall()">End Call</button>
     <button class="bg-white/10 hover:bg-white/20 text-white text-sm px-4 py-2 rounded-lg transition" (click)="toggleCamera()">Toggle Camera</button>
@@ -99,7 +99,7 @@
     <button class="bg-yellow-500 hover:bg-yellow-600 text-white text-sm px-4 py-2 rounded-lg transition" (click)="stopScreenShare()">Stop Sharing</button>
   </div>
 
-  <div class="mt-4 flex items-center gap-3 flex-wrap bg-white/10 backdrop-blur-md border border-white/20 rounded-xl px-4 py-3">
+  <div class="mt-4 flex items-center gap-3 flex-wrap bg-white/10 backdrop-blur-md border border-white/20 rounded-xl px-4 py-3 flex-shrink-0">
     <input
       [(ngModel)]="messageContent"
       placeholder="Type a message..."
@@ -149,7 +149,8 @@
       <span *ngIf="isUploadingAudio && !isRecording" class="text-blue-400 text-sm">Uploading audio…</span>
     </div>
   </div>
-    <app-server-members-popup
+
+  <app-server-members-popup
     *ngIf="showMembersPopup"
     [vanityId]="channel"
     [serverName]="serverName"

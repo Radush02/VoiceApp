@@ -1,7 +1,8 @@
 package com.example.voiceapp.collection;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+
+import com.example.voiceapp.Enum.Role;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
@@ -15,6 +16,8 @@ public class Channel {
   private String name;
   private String vanityId;
   private String createdBy;
-  private Set<String> members = new HashSet<>();
+  private Map<String, Role> members = new HashMap<>();
   private String imageLink;
+  private Map<String, Date> mutedMembers = new HashMap<>();
+  private Set<String> bannedMembers = new HashSet<>();
 }

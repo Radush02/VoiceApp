@@ -434,6 +434,14 @@ public toggleCamera(): boolean {
   return false;
 }
 
+public reinitializeLocalVideo(videoElement: HTMLVideoElement): void {
+  if (this.localStream && videoElement) {
+    this.localVideoEl = videoElement;
+    this.localVideoEl.muted = true;
+    this.localVideoEl.srcObject = this.localStream;
+  }
+  }
+
 
   private sendSignal(signal: any) {
     this.ws.sendSignal(this.channelId, signal);

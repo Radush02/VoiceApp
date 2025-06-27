@@ -35,6 +35,16 @@ public class ChatController {
     return new ResponseEntity<>(Map.of("active", active), HttpStatus.OK);
   }
 
+  @PostMapping("/api/call/{channel}/join")
+  public ResponseEntity<Map<String, Boolean>> joinCall(@PathVariable String channel, Principal principal) {
+    if (principal == null) {
+      throw new NotPermittedException("Unauthorized");
+    }
+    String username = principal.getName();
+    boolean isInitiator = callService.attemptJoinCall(channel, username);
+    return new ResponseEntity<>(Map.of("isInitiator", isInitiator), HttpStatus.OK);
+  }
+
   @MessageMapping("/sendMessage/{channel}")
   public void sendMessage(@DestinationVariable String channel,
                           @Payload Message message,

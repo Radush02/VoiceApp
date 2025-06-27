@@ -84,9 +84,12 @@ closeMembersPopup(): void {
     private userService: UserService
   ) {
     this.params.params.subscribe((params) => {
-      this.channel = params["channel"];
-      console.log("Channel:", this.channel);
-    });
+      const newChannel = params["channel"];
+      if (newChannel && newChannel !== this.channel) {
+        this.channel = newChannel;
+        this.loadChannelData(this.channel);
+      }
+});
 
     this.authService.getUsername().subscribe((username) => {
       this.username = username;
@@ -152,6 +155,41 @@ closeMembersPopup(): void {
     } catch {
     }
   }
+private loadChannelData(channel: string): void {
+  this.websocketService.unsubscribeFromChannel(`/channel/${this.channel}`);
+
+  this.messages = [];
+
+  this.websocketService.subscribeToChannel(`/channel/${channel}`, (msg) => {
+    this.ngZone.run(() => {
+      this.messages = [...this.messages, msg];
+      this.cdr.markForCheck();
+    });
+  });
+
+  this.chatService.fetchMessages(channel).subscribe((messages) => {
+    if (messages) {
+      this.messages = messages;
+    }
+    console.log("Fetched messages:", this.messages);
+  });
+
+  this.websocketService.subscribeToTyping(channel, (user) => {
+    if (user !== this.username) {
+      this.typingUsers.add(user);
+      if (this.typingTimeouts.has(user)) {
+        clearTimeout(this.typingTimeouts.get(user));
+      }
+      const timeout = setTimeout(() => {
+        this.typingUsers.delete(user);
+        this.typingTimeouts.delete(user);
+        this.cdr.markForCheck();
+      }, 3000);
+      this.typingTimeouts.set(user, timeout);
+      this.cdr.markForCheck();
+    }
+  });
+}
 
   onImageSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -286,19 +324,20 @@ closeMembersPopup(): void {
       return;
     }
 
-    let roomExists: boolean;
+    let isInitiator: boolean;
     try {
       const resp = await firstValueFrom(
-        this.chatService.isCallActiveOnServer(this.channel)
+        this.chatService.joinCall(this.channel)
       );
-      roomExists = resp.active;
+      isInitiator = resp.isInitiator;
     } catch (err) {
-      roomExists = false;
+      console.error("Failed to join call:", err);
+      return;
     }
 
     this.isCallActive = true;
 
-    if (!roomExists) {
+    if (isInitiator) {
       await this.webrtc.initAsInitiator(
         this.channel,
         this.localVideo.nativeElement,
