@@ -1,0 +1,66 @@
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #4B5563;
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #6B7280;
+}
+
+::ng-deep .mat-mdc-progress-spinner {
+  --mdc-circular-progress-active-indicator-color: #3B82F6;
+}
+
+input:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.6;
+}
+
+.user-result-enter {
+  animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.status-success {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.status-error {
+  animation: shake 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 20%, 50%, 80%, 100% { transform: translateX(0); }
+  10%, 30%, 70%, 90% { transform: translateX(-2px); }
+  40%, 60% { transform: translateX(2px); }
+}

@@ -1,6 +1,7 @@
 package com.example.voiceapp.service.MessageService;
 
 import com.example.voiceapp.collection.Message;
+import com.example.voiceapp.dtos.SeenReceiptDTO;
 import org.springframework.scheduling.annotation.Async;
 
 import java.util.List;
@@ -18,4 +19,6 @@ public interface MessageService {
   CompletableFuture<List<Message>> fetchMessagesByChannel(String channel, Integer limit);
 
   CompletableFuture<List<Message>> fetchMessageByDM(String sender, String recipient, Integer limit);
+
+  void handleSeen(String reader, SeenReceiptDTO seenReceipt);
 }

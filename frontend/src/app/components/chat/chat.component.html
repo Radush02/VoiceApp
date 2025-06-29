@@ -19,39 +19,53 @@
     </ng-container>
   </div>
 
-  <div class="flex-1 overflow-y-auto space-y-4 pr-1 min-h-0" #messagesContainer>
-    <div
-      *ngFor="let message of messages"
-      [ngClass]="{
-        'items-end justify-end text-right': message.sender === username,
-        'items-start justify-start text-left': message.sender !== username
-      }"
-      class="flex"
-    >
-      <div class="max-w-xs md:max-w-sm rounded-2xl p-3 bg-white/10 backdrop-blur border border-white/10">
-        <div (click)="openProfilePopup(message.sender)" class="text-xs text-gray-300 mb-1">{{ message.sender }}</div>
+<div class="flex-1 overflow-y-auto space-y-4 pr-1 min-h-0" #messagesContainer>
+  <div
+    *ngFor="let message of messages"
+    [ngClass]="{
+      'items-end justify-end': message.sender === username,
+      'items-start justify-start': message.sender !== username
+    }"
+    class="flex flex-col" >
+    <div class="max-w-xs md:max-w-sm rounded-2xl p-3 bg-white/10 backdrop-blur border border-white/10">
+      <div 
+        *ngIf="message.sender !== username" 
+        (click)="openProfilePopup(message.sender)" 
+        class="text-xs text-gray-300 mb-1 cursor-pointer"
+      >
+        {{ message.sender }}
+      </div>
 
-        <div *ngIf="message.content" class="text-sm text-white break-words" 
-            [innerHTML]="message.content | mentionHighlight">
-        </div>
+      <div *ngIf="message.content" class="text-sm text-white break-words" 
+          [innerHTML]="message.content | mentionHighlight">
+      </div>
 
-        <div *ngIf="message.attachment" class="mt-2">
-          <ng-container *ngIf="isImage(message.attachment)">
-            <img [src]="message.attachment" alt="Shared image" class="rounded-lg max-w-[200px] max-h-[200px]" />
-          </ng-container>
-          <ng-container *ngIf="isAudio(message.attachment)">
-            <audio controls [src]="message.attachment" class="w-48 h-10 mt-1 rounded-lg"></audio>
-          </ng-container>
-        </div>
+      <div *ngIf="message.attachment" class="mt-2">
+        <ng-container *ngIf="isImage(message.attachment)">
+          <img [src]="message.attachment" alt="Shared image" class="rounded-lg max-w-[200px] max-h-[200px]" />
+        </ng-container>
+        <ng-container *ngIf="isAudio(message.attachment)">
+          <audio controls [src]="message.attachment" class="w-48 h-10 mt-1 rounded-lg"></audio>
+        </ng-container>
+      </div>
+
+      <div class="text-xs text-gray-400 mt-1" [ngClass]="{'text-right': message.sender === username, 'text-left': message.sender !== username}">
+        {{ message.date | date:'shortTime' }}
+        <span *ngIf="!hasBeenSeen(message) && message.sender === username" class="single-check">✓</span>
+        <span *ngIf="hasBeenSeen(message) && message.sender === username" class="blue-check">✓✓</span>
       </div>
     </div>
+
+
   </div>
+</div>
 
   <div class="flex flex-wrap gap-4 mt-4 flex-shrink-0">
     <div
       class="relative w-48 h-48 rounded-lg bg-black/40 border border-white/20 overflow-hidden cursor-pointer"
-      [class.w-full]="selectedStream === 'local'"
-      [class.h-auto]="selectedStream === 'local'"
+      [ngClass]="{
+        'w-[75%] h-[75%]': selectedStream === 'local'
+      }"
       (click)="selectStream('local')"
     >
       <video
@@ -71,8 +85,8 @@
     <ng-container *ngFor="let r of remoteStreams">
       <div
         class="relative w-48 h-48 rounded-lg bg-black/40 border border-white/20 overflow-hidden cursor-pointer"
-        [class.w-full]="selectedStream === r.peerId"
-        [class.h-auto]="selectedStream === r.peerId"
+        [class.w-96]="selectedStream === r.peerId"
+        [class.h-72]="selectedStream === r.peerId"
         (click)="selectStream(r.peerId)"
       >
         <video

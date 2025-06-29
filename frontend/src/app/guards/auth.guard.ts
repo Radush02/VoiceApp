@@ -9,7 +9,7 @@ export class AuthGuard implements CanActivate {
   constructor(private authService: AuthenticationService, private router: Router) { }
 
   canActivate(): Observable<boolean> {
-    return this.authService.loggedIn().pipe(
+    return this.authService.initializeAuth().pipe(
       tap(loggedIn => {
         if (!loggedIn) {
           console.log('You are not logged in!');

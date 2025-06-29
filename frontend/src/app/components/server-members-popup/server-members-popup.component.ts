@@ -1,14 +1,16 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { ChannelService } from '../../services/channel.service';
 import { UserService } from '../../services/user.service';
 import { CreateInviteComponent } from '../create-invite/create-invite.component';
+import { AdminActionPanelComponent } from '../admin-action-panel/admin-action-panel.component';
 
 @Component({
   selector: 'app-server-members-popup',
   templateUrl: './server-members-popup.component.html',
-  imports: [CommonModule, FormsModule,CreateInviteComponent],
+  imports: [CommonModule, FormsModule, CreateInviteComponent],
   standalone: true
 })
 export class ServerMembersPopupComponent implements OnInit {
@@ -30,7 +32,8 @@ export class ServerMembersPopupComponent implements OnInit {
 
   constructor(
     private channelService: ChannelService,
-    private userService: UserService
+    private userService: UserService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit() {
@@ -131,7 +134,41 @@ export class ServerMembersPopupComponent implements OnInit {
   }
 
   openMemberOptions(member: UserDTO) {
-    console.log('Opening options for member:', member);
+    console.log('openMemberOptions called with member:', member);
+    console.log('Current admin status:', this.isAdmin);
+    
+    if (!this.isAdmin) {
+      console.log('Only admins can perform moderation actions');
+      return;
+    }
+
+    if (member.username === this.currentUsername) {
+      console.log('Cannot perform admin actions on yourself');
+      return;
+    }
+
+    console.log('Opening admin action dialog...');
+    const dialogRef = this.dialog.open(AdminActionPanelComponent, {
+      width: '500px',
+      maxWidth: '90vw',
+      data: {
+        member: member,
+        currentUsername: this.currentUsername,
+        vanityId: this.vanityId
+      },
+      panelClass: 'admin-action-dialog',
+      hasBackdrop: true,
+      disableClose: false
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      console.log('Dialog closed with result:', result);
+      if (result && result.success) {
+        console.log('Admin action completed:', result);
+
+        this.loadMembers();
+      }
+    });
   }
 
   viewMemberProfile(member: UserDTO) {

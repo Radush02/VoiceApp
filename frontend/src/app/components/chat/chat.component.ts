@@ -15,7 +15,7 @@ import { FormsModule } from "@angular/forms";
 import { CommonModule } from "@angular/common";
 import { WebrtcService } from "../../services/webrtc.service";
 import { ChatService } from "../../services/chat.service";
-import { SignalMessage } from "../../models/signal-message.model";
+import {Message} from "../../models/user.model";
 import { Subject, firstValueFrom, Subscription } from "rxjs";
 import { takeUntil } from "rxjs/operators";
 import { v4 as uuidv4 } from "uuid";
@@ -87,52 +87,25 @@ closeMembersPopup(): void {
       const newChannel = params["channel"];
       if (newChannel && newChannel !== this.channel) {
         this.channel = newChannel;
-        this.loadChannelData(this.channel);
+        if (this.username) {
+          this.loadChannelData(this.channel);
+        }
       }
 });
 
     this.authService.getUsername().subscribe((username) => {
       this.username = username;
       console.log("Username:", this.username);
+      if (this.channel && this.username) {
+        this.loadChannelData(this.channel);
+      }
     });
   }
 
   ngOnInit() {
-    this.websocketService.subscribeToChannel(`/channel/${this.channel}`, (msg) => {
-      this.ngZone.run(() => {
-        this.messages = [...this.messages, msg];
-        this.cdr.markForCheck();
-      });
-    });
-
-    this.chatService.fetchMessages(this.channel).subscribe((messages) => {
-      if (messages) {
-        this.messages = messages;
-      }
-      console.log("Fetched messages:", this.messages);
-    });
-
-    // this.websocketService.getMessages().subscribe((message) => {
-    //   if (message) {
-    //     this.messages.push(message);
-    //   }
-    // });
-
-    this.websocketService.subscribeToTyping(this.channel, (user) => {
-      if (user !== this.username) {
-        this.typingUsers.add(user);
-        if (this.typingTimeouts.has(user)) {
-          clearTimeout(this.typingTimeouts.get(user));
-        }
-        const timeout = setTimeout(() => {
-          this.typingUsers.delete(user);
-          this.typingTimeouts.delete(user);
-          this.cdr.markForCheck();
-        }, 3000);
-        this.typingTimeouts.set(user, timeout);
-        this.cdr.markForCheck();
-      }
-    });
+    if (this.channel && this.username) {
+      this.loadChannelData(this.channel);
+    }
   }
 
   ngAfterViewChecked() {
@@ -143,6 +116,13 @@ closeMembersPopup(): void {
     if (this.isRecording) {
       this.stopRecording();
     }
+      if (this.channel) {
+      this.websocketService.unsubscribeFromChannel(`/channel/${this.channel}`);
+      this.websocketService.unsubscribeFromChannel(`/channel/${this.channel}/typing`);
+    }
+    
+    this.typingTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.typingTimeouts.clear();
     this.destroy$.next();
     this.destroy$.complete();
     this.subs.forEach((s) => s.unsubscribe());
@@ -156,13 +136,26 @@ closeMembersPopup(): void {
     }
   }
 private loadChannelData(channel: string): void {
-  this.websocketService.unsubscribeFromChannel(`/channel/${this.channel}`);
+  if (this.channel && this.channel !== channel) {
+    this.websocketService.unsubscribeFromChannel(`/channel/${this.channel}`);
+    this.websocketService.unsubscribeFromChannel(`/channel/${this.channel}/typing`);
+  }
 
   this.messages = [];
 
-  this.websocketService.subscribeToChannel(`/channel/${channel}`, (msg) => {
+  this.websocketService.subscribeToChannel(`/channel/${channel}`, (payload: Message | Message[]) => {
     this.ngZone.run(() => {
-      this.messages = [...this.messages, msg];
+      if (Array.isArray(payload)) {
+        payload.forEach(updatedMsg => {
+          const index = this.messages.findIndex(m => m.id === updatedMsg.id);
+          if (index !== -1) {
+            this.messages[index].seenBy = updatedMsg.seenBy;
+          }
+        });
+      } else {
+        this.messages = [...this.messages, payload];
+        this.sendSeenReceipt([payload]);
+      }
       this.cdr.markForCheck();
     });
   });
@@ -342,8 +335,13 @@ private loadChannelData(channel: string): void {
         this.channel,
         this.localVideo.nativeElement,
         (peerId: string, stream: MediaStream) => {
-          this.remoteStreams.push({ peerId, stream,  cameraOn: stream.getVideoTracks().some(track => track.enabled)
- });
+          const existingStreamIndex = this.remoteStreams.findIndex(s => s.peerId === peerId);
+          if (existingStreamIndex > -1) {
+            this.remoteStreams[existingStreamIndex].stream = stream;
+            this.remoteStreams[existingStreamIndex].cameraOn = stream.getVideoTracks().some(track => track.enabled);
+          } else {
+            this.remoteStreams.push({ peerId, stream, cameraOn: stream.getVideoTracks().some(track => track.enabled) });
+          }
           this.cdr.markForCheck();
           setTimeout(() => {
             const vid: HTMLVideoElement | null = document.getElementById(
@@ -360,8 +358,14 @@ private loadChannelData(channel: string): void {
         this.channel,
         this.localVideo.nativeElement,
         (peerId: string, stream: MediaStream) => {
-          this.remoteStreams.push({ peerId, stream,  cameraOn: stream.getVideoTracks().some(track => track.enabled)
- });
+        const existingStreamIndex = this.remoteStreams.findIndex(s => s.peerId === peerId);
+        if (existingStreamIndex > -1) {
+          this.remoteStreams[existingStreamIndex].stream = stream;
+          this.remoteStreams[existingStreamIndex].cameraOn = stream.getVideoTracks().some(track => track.enabled);
+        } else {
+          this.remoteStreams.push({ peerId, stream, cameraOn: stream.getVideoTracks().some(track => track.enabled) });
+        }
+
           this.cdr.markForCheck();
           setTimeout(() => {
             const vid = document.getElementById(
@@ -446,6 +450,24 @@ openUserSettings(): void {
 
 }
 
+private sendSeenReceipt(messages: Message[]): void {
+  const unseenMessageIds = messages
+    .filter(msg => msg.sender !== this.username && !msg.seenBy.includes(this.username))
+    .map(msg => msg.id);
+
+  if (unseenMessageIds.length > 0) {
+    const receipt = {
+      channelId: this.channel,
+      recipientId: null,
+      messageIds: unseenMessageIds,
+    };
+    this.websocketService.sendMessage('/app/seen', receipt);
+  }
+}
+
+  hasBeenSeen(message: Message): boolean {
+    return message.seenBy.filter(u => u !== this.username).length > 0;
+  }
 openProfilePopup(username: string):void{
 
     this.userService.getUserInfo(username).subscribe(
@@ -456,26 +478,4 @@ openProfilePopup(username: string):void{
       });
       });
 }
-
-}
-interface TextChannel {
-  id: string;
-  name: string;
-  hasUnread: boolean;
-  notificationCount: number;
-}
-
-interface VoiceChannel {
-  id: string;
-  name: string;
-  userCount: number;
-  connectedUsers: ConnectedUser[];
-}
-
-interface ConnectedUser {
-  id: string;
-  username: string;
-  avatar?: string;
-  isMuted: boolean;
-  isDeafened: boolean;
 }

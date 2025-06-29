@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable,map,catchError,of,tap } from 'rxjs';
+import { Observable,map,catchError,of,tap,timer } from 'rxjs';
 import { environment } from '../environments/environment';
 @Injectable({
   providedIn: 'root'
@@ -8,11 +8,20 @@ import { environment } from '../environments/environment';
 export class AuthenticationService {
   
   private apiLink = environment.apiUrl+'/auth';
+  private refreshTimer: any;
   
   constructor(private http:HttpClient) { }
 
+  initializeAuth(): Observable<boolean> {
+    console.log('Initializing authentication state...');
+    return this.loggedIn();
+  }
+
   login(username: string, password: string) {
-    return this.http.post(`${this.apiLink}/login`, {username:username, password },{ withCredentials: true });
+    console.log('Login called, starting token refresh timer');
+    return this.http.post(`${this.apiLink}/login`, {username:username, password },{ withCredentials: true }).pipe(
+      tap(() => this.startTokenRefresh())
+    );
   }
 
   register(username: string, password: string,email: string,imageLink?:string): Observable<any> {
@@ -22,14 +31,29 @@ export class AuthenticationService {
   }
 
   logout() {
-    return this.http.post(`${this.apiLink}/logout`, {}, { withCredentials: true })
-      .subscribe(() => console.log('Logged out'));
+    console.log('Logout called, stopping token refresh timer');
+    this.stopTokenRefresh();
+    return this.http.post(`${this.apiLink}/logout`, {}, { withCredentials: true });
   }
+
+  refreshToken(): Observable<any> {
+    return this.http.post(`${this.apiLink}/refresh`, {}, { withCredentials: true });
+  }
+
   loggedIn(): Observable<boolean> {
     return this.http.post<{isAuthenticated:boolean}>(`${this.apiLink}/check`, {}, { withCredentials: true }).pipe(
-      tap(response => console.log('Logged in:', response.isAuthenticated)),
+      tap(response => {
+        console.log('Auth check result:', response.isAuthenticated);
+        if (response.isAuthenticated && !this.refreshTimer) {
+          console.log('Starting token refresh timer');
+          this.startTokenRefresh();
+        }
+      }),
       map(response=>response.isAuthenticated), 
-      catchError(() => of(false)) 
+      catchError((error) => {
+        console.error('Auth check failed:', error);
+        return of(false);
+      }) 
     );
   }
   getUsername(): Observable<string> {
@@ -38,6 +62,37 @@ export class AuthenticationService {
       map(response => response.username),
       catchError(() => of('')) 
     );
+  }
+
+
+  private startTokenRefresh() {
+    this.stopTokenRefresh();
+    // Refresh token every 50 minutes (10 minutes before expiry)
+    this.refreshTimer = timer(50 * 60 * 1000, 50 * 60 * 1000).subscribe(() => {
+      this.refreshToken().subscribe({
+        next: (response) => {
+          console.log('Token refreshed successfully');
+        },
+        error: (error) => {
+          console.error('Token refresh failed:', error);
+          // Only logout if it's an authentication error (401/403)
+          if (error.status === 401 || error.status === 403) {
+            console.log('Authentication failed, logging out');
+            this.logout().subscribe();
+          } else {
+            console.log('Network or other error, will retry on next interval');
+            // For network errors, we'll just wait for the next refresh attempt
+          }
+        }
+      });
+    });
+  }
+
+  private stopTokenRefresh() {
+    if (this.refreshTimer) {
+      this.refreshTimer.unsubscribe();
+      this.refreshTimer = null;
+    }
   }
 
 }

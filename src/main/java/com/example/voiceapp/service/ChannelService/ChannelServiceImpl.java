@@ -6,10 +6,7 @@ import com.example.voiceapp.collection.Channel;
 import com.example.voiceapp.collection.ChannelMembership;
 import com.example.voiceapp.collection.Invite;
 import com.example.voiceapp.collection.User;
-import com.example.voiceapp.dtos.AdminActionDTO;
-import com.example.voiceapp.dtos.ChannelDTO;
-import com.example.voiceapp.dtos.CreateInviteDTO;
-import com.example.voiceapp.dtos.UserDTO;
+import com.example.voiceapp.dtos.*;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.exceptions.NotPermittedException;
@@ -27,6 +24,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class ChannelServiceImpl implements ChannelService {
@@ -55,22 +53,21 @@ public class ChannelServiceImpl implements ChannelService {
     newChannel.getMembers().put(authService.extractUsername(), Role.ADMIN);
     u.getChannels().add(new ChannelMembership(newChannel.getVanityId(), Role.ADMIN, new Date()));
 
-    String fileName = channel.getVanityId() + "." +
-            StringUtils.getFilenameExtension(channel.getFile().getOriginalFilename());
+    MultipartFile file = channel.getFile();
+    if (file != null && !file.isEmpty()) {
+      String fileName = channel.getVanityId() + "." +
+              StringUtils.getFilenameExtension(file.getOriginalFilename());
 
-    CompletableFuture<Map<String, String>> future;
-    try {
-      future = s3Service.uploadFile(fileName, channel.getFile())
+      return s3Service.uploadFile(fileName, file)
               .thenApply(imageUrl -> {
                 newChannel.setImageLink(imageUrl);
                 return saveChannelAndReturn(newChannel, u);
               });
-    } catch (Exception e) {
-      future = CompletableFuture.completedFuture(saveChannelAndReturn(newChannel, u));
+    } else {
+      return CompletableFuture.completedFuture(saveChannelAndReturn(newChannel, u));
     }
-
-    return future;
   }
+
 
   private Map<String, String> saveChannelAndReturn(Channel newChannel, User u) {
     channelRepository.save(newChannel);
@@ -190,7 +187,7 @@ public class ChannelServiceImpl implements ChannelService {
       long expiresInMS = createInviteDTO.getExpiresInMinutes() * 60L * 1000L;
       invite.setExpiresAt(new Date(new Date().getTime() + expiresInMS));
     }
-    if (createInviteDTO.getMaxUses() != null) {
+    if (createInviteDTO.getMaxUses() != null && createInviteDTO.getMaxUses()>0) {
       invite.setMaxUses(createInviteDTO.getMaxUses());
     }
     inviteRepository.save(invite);
@@ -227,6 +224,33 @@ public class ChannelServiceImpl implements ChannelService {
             "Server", buildActionMessage(admin.getUsername(), action.getAction(), target.getUsername())
     ));
   }
+
+  @Override
+  public CompletableFuture<GetChannelDTO> getChannel(String vanityId) {
+    Channel c = channelRepository.findByVanityId(vanityId).orElseThrow(() -> new NonExistentException("Channel not found"));
+    GetChannelDTO dto = new GetChannelDTO();
+    dto.setName(c.getName());
+    dto.setVanityId(c.getVanityId());
+    dto.setPhoto(c.getImageLink());
+    return CompletableFuture.completedFuture(dto);
+  }
+
+  @Override
+  public CompletableFuture<Map<String, Boolean>> inServer(InServerDTO inServerDTO) {
+    User u = userRepository.findByUsernameIgnoreCase(inServerDTO.getUsername()).orElseThrow(() -> new NonExistentException("User not found"));
+    Channel c = channelRepository.findByVanityId(inServerDTO.getVanityId()).orElseThrow(() -> new NonExistentException("Channel not found"));
+    if(c.getMembers().containsKey(u.getUsername())) {
+      return CompletableFuture.completedFuture(Map.of("Server", true));
+    }
+    return CompletableFuture.completedFuture(Map.of("Server", false));
+  }
+
+  @Override
+  public CompletableFuture<Map<String, String>> getServerFromInvite(String inviteCode) {
+    Invite i = inviteRepository.findById(inviteCode).orElseThrow(() -> new NonExistentException("Invite not found"));
+    return CompletableFuture.completedFuture(Map.of("Server", i.getVanityId()));
+  }
+
 
   private void kickUserFromChannel(User user, Channel channel) {
     boolean removed = user.getChannels().removeIf(

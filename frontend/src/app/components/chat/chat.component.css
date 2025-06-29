@@ -30,3 +30,18 @@
 .mention:hover {
   background-color: #337ab7;
 }
+
+.message-status {
+  font-size: 0.9rem;
+  margin-top: 2px;
+  text-align: right;
+}
+
+.single-check {
+  color: #a0aec0;
+}
+
+.blue-check {
+  color: #34B7F1;
+  font-weight: bold; 
+}

@@ -1,0 +1,140 @@
+<div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" (click)="close()">
+  <div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md max-h-[90vh] overflow-hidden" (click)="$event.stopPropagation()">
+        <div class="relative bg-gradient-to-r from-blue-600 to-purple-600 p-6">
+      <button 
+        (click)="close()"
+        class="absolute top-4 right-4 text-white/80 hover:text-white transition-colors duration-200"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+
+      <div class="text-center">
+        <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+          </svg>
+        </div>
+        <h2 class="text-white text-xl font-bold">Add Friend</h2>
+        <p class="text-white/80 text-sm">Search for users to send friend requests</p>
+      </div>
+    </div>
+
+    <div class="p-6 border-b border-gray-700">
+      <div class="space-y-4">
+        <div class="relative">
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (keyup.enter)="onEnterPressed()"
+            placeholder="Enter username..."
+            class="w-full bg-gray-700 text-white placeholder-gray-400 rounded-lg px-4 py-3 pr-20 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+            [disabled]="isSearching"
+          />
+          <div class="absolute right-2 top-1/2 transform -translate-y-1/2 flex space-x-1">
+            <button
+              *ngIf="searchQuery"
+              (click)="clearSearch()"
+              class="p-1 text-gray-400 hover:text-white transition-colors duration-200"
+              title="Clear search"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+            <button
+              (click)="searchUser()"
+              [disabled]="isSearching || !searchQuery.trim()"
+              class="p-1 text-blue-400 hover:text-blue-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors duration-200"
+              title="Search"
+            >
+              <svg *ngIf="!isSearching" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              <mat-spinner *ngIf="isSearching" diameter="16" color="primary"></mat-spinner>
+            </button>
+          </div>
+        </div>
+        <div *ngIf="searchError" class="bg-red-900/50 border border-red-700 rounded-lg p-3">
+          <div class="flex items-center">
+            <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span class="text-red-300 text-sm">{{ searchError }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="searchedUser" class="p-6 space-y-4">
+      <div class="bg-gray-700/50 rounded-lg p-4">
+        <div class="flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-full border-2 border-gray-600 overflow-hidden bg-gray-600 flex items-center justify-center flex-shrink-0">
+            <img 
+              *ngIf="searchedUser.imageLink; else avatarInitial" 
+              [src]="searchedUser.imageLink" 
+              [alt]="searchedUser.username + '\'s avatar'"
+              class="w-full h-full object-cover"
+            />
+            <ng-template #avatarInitial>
+              <span class="text-white text-lg font-bold">{{ searchedUser.username.charAt(0).toUpperCase() }}</span>
+            </ng-template>
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <h3 class="text-white font-semibold text-lg truncate">{{ searchedUser.username }}</h3>
+            <p class="text-gray-400 text-sm">{{ searchedUser.status || 'Online' }}</p>
+          </div>
+        </div>
+
+        <div *ngIf="searchedUser.aboutMe" class="mt-4 pt-4 border-t border-gray-600">
+          <h4 class="text-gray-300 text-xs uppercase tracking-wide font-semibold mb-2">About</h4>
+          <p class="text-gray-300 text-sm">{{ searchedUser.aboutMe }}</p>
+        </div>
+      </div>
+
+      <div *ngIf="requestSent" class="bg-green-900/50 border border-green-700 rounded-lg p-3">
+        <div class="flex items-center">
+          <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          <span class="text-green-300 text-sm">Friend request sent successfully!</span>
+        </div>
+      </div>
+
+      <div *ngIf="requestError" class="bg-red-900/50 border border-red-700 rounded-lg p-3">
+        <div class="flex items-center">
+          <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span class="text-red-300 text-sm">{{ requestError }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-700 p-4">
+      <div class="flex justify-between space-x-3">
+        <button 
+          (click)="close()"
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
+        >
+          Cancel
+        </button>
+        
+        <button 
+          *ngIf="searchedUser && !requestSent"
+          (click)="sendFriendRequest()"
+          [disabled]="isSendingRequest"
+          class="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 text-sm font-medium flex items-center space-x-2"
+        >
+          <mat-spinner *ngIf="isSendingRequest" diameter="16" color="primary"></mat-spinner>
+          <svg *ngIf="!isSendingRequest" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+          </svg>
+          <span>{{ isSendingRequest ? 'Sending...' : 'Send Friend Request' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

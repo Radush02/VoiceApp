@@ -1,13 +1,12 @@
 package com.example.voiceapp.controllers;
 
-import com.example.voiceapp.dtos.AdminActionDTO;
-import com.example.voiceapp.dtos.ChannelDTO;
-import com.example.voiceapp.dtos.CreateInviteDTO;
-import com.example.voiceapp.dtos.UserDTO;
+import com.amazonaws.Response;
+import com.example.voiceapp.dtos.*;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
 
 import java.io.IOException;
+import java.security.Principal;
 import java.util.Map;
 import java.util.Set;
 
@@ -92,7 +91,44 @@ public class ChannelController {
             });
     return result;
   }
+  @GetMapping("/{vanityId}")
+  @ResponseStatus(HttpStatus.OK)
+  public DeferredResult<ResponseEntity<GetChannelDTO>> getChannel(@PathVariable String vanityId) {
+    DeferredResult<ResponseEntity<GetChannelDTO>> output = new DeferredResult<>();
+    channelService.getChannel(vanityId).thenAccept(response -> output.setResult(ResponseEntity.ok(response)))
+            .exceptionally(ex->
+            {output.
+                    setErrorResult(
+                            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).
+                                    body(null));
+            return null;});
+    return output;
+  }
 
+  @GetMapping("inServer/{vanityId}")
+  @ResponseStatus(HttpStatus.OK)
+  public DeferredResult<ResponseEntity<Map<String,Boolean>>> getInServer(@PathVariable String vanityId, Principal principal) {
+    DeferredResult<ResponseEntity<Map<String,Boolean>>> output = new DeferredResult<>();
+    channelService.inServer(new InServerDTO(principal.getName(),vanityId)).thenAccept(response -> output.setResult(ResponseEntity.ok(response)))
+            .exceptionally( ex->
+            {
+              output.setErrorResult(
+                      ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
+            return null;});
+    return output;
+  }
+  @GetMapping("vanity/{inviteCode}")
+  @ResponseStatus(HttpStatus.OK)
+  public DeferredResult<ResponseEntity<Map<String, String>>> getVanity(@PathVariable String inviteCode) {
+    DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
+    channelService.getServerFromInvite(inviteCode).thenAccept(response -> output.setResult(ResponseEntity.ok(response)))
+            .exceptionally( ex->
+            {
+              output.setErrorResult(
+                      ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
+              return null;});
+    return output;
+  }
   @ExceptionHandler(AlreadyExistsException.class)
   public ResponseEntity<Map<String, String>> handleAlreadyExistsException(AlreadyExistsException e) {
     return new ResponseEntity<>(Map.of("Error", e.getMessage()), HttpStatus.CONFLICT);

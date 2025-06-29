@@ -494,7 +494,7 @@ public reinitializeLocalVideo(videoElement: HTMLVideoElement): void {
     username: string;
     credential: string;
     urls: string[];
-  }>(`${this.apiUrl}/turn?userId=${userId}`).subscribe({
+  }>(`${this.apiUrl}/turn?userId=${userId}`, { withCredentials: true }).subscribe({
     next: (turn) => {
       this.rtcConfig.iceServers = [
         {

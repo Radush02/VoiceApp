@@ -1,35 +1,152 @@
-<div class="chat-container">
-    <h2>Direct Message with {{ recipient }}</h2>
-    
-    <div class="messages-container">
-      <div *ngFor="let message of receivedMessages"
-           [ngClass]="{'message-right': message.sender === username, 'message-left': message.sender !== username}"
-           class="message-item">
-        <div class="message-content">
-          <div class="sender-name">{{ message.sender }}</div>
-          <div class="message-text" *ngIf="message.content">{{ message.content }}</div>
-          <div class="message-image" *ngIf="message.attachment">
-            <img [src]="message.attachment" alt="Shared image" />
-          </div>
+<div class="flex flex-col h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-4 relative text-white overflow-hidden">
+
+  <h2 class="text-xl font-semibold mb-4 z-10 flex items-center group flex-shrink-0">
+    Direct Message with {{ recipient }}
+  </h2>
+
+  <div *ngIf="typingUsers.size > 0" class="text-sm text-purple-300 italic mb-2 z-10 flex-shrink-0">
+    {{ recipient }} is typing...
+  </div>
+
+  <div class="flex-1 overflow-y-auto space-y-4 pr-1 min-h-0" #messagesContainer>
+    <div
+      *ngFor="let message of receivedMessages"
+      [ngClass]="{
+        'items-end justify-end': message.sender === username,
+        'items-start justify-start': message.sender !== username
+      }"
+      class="flex flex-col">
+      <div class="max-w-xs md:max-w-sm rounded-2xl p-3 bg-white/10 backdrop-blur border border-white/10">
+        <div 
+          *ngIf="message.sender !== username" 
+          (click)="openProfilePopup(message.sender)" 
+          class="text-xs text-gray-300 mb-1 cursor-pointer"
+        >
+          {{ message.sender }}
+        </div>
+
+        <div *ngIf="message.content" class="text-sm text-white break-words" 
+            [innerHTML]="message.content | mentionHighlight">
+        </div>
+
+        <div *ngIf="message.attachment" class="mt-2">
+          <ng-container *ngIf="isImage(message.attachment)">
+            <img [src]="message.attachment" alt="Shared image" class="rounded-lg max-w-[200px] max-h-[200px]" />
+          </ng-container>
+          <ng-container *ngIf="isAudio(message.attachment)">
+            <audio controls [src]="message.attachment" class="w-48 h-10 mt-1 rounded-lg"></audio>
+          </ng-container>
+        </div>
+
+        <div class="text-xs text-gray-400 mt-1" [ngClass]="{'text-right': message.sender === username, 'text-left': message.sender !== username}">
+          {{ message.date | date:'shortTime' }}
+          <span *ngIf="!hasBeenSeen(message) && message.sender === username" class="single-check">✓</span>
+          <span *ngIf="hasBeenSeen(message) && message.sender === username" class="blue-check">✓✓</span>
         </div>
       </div>
-    </div>
-  
-    <div class="input-container">
-      <input [(ngModel)]="messageContent" placeholder="Type a message..." (keyup.enter)="sendMessage()" />
-  
-      <div class="upload-container">
-        <label for="imageUpload" class="upload-button">
-          <span class="upload-icon">📎</span>
-        </label>
-        <input type="file" id="imageUpload" accept="image/*" (change)="onImageSelected($event)" />
-        <div *ngIf="selectedImage" class="selected-image-name">
-          {{ getImageName() }}
-          <button class="remove-image" (click)="removeSelectedImage()">✕</button>
-        </div>
-      </div>
-  
-      <button (click)="sendMessage()" [disabled]="!messageContent && !selectedImage">Send</button>
     </div>
   </div>
-  
+
+  <div class="flex flex-wrap gap-4 mt-4 flex-shrink-0">
+    <div
+      class="relative w-48 h-48 rounded-lg bg-black/40 border border-white/20 overflow-hidden cursor-pointer"
+      [class.w-full]="selectedStream === 'local'"
+      [class.h-auto]="selectedStream === 'local'"
+      (click)="selectStream('local')"
+    >
+      <video
+        #local
+        muted
+        autoplay
+        playsinline
+        [style.display]="isLocalCameraOn ? 'block' : 'none'"
+        class="w-full h-full object-cover"
+      ></video>
+      <div *ngIf="!isLocalCameraOn" class="w-full h-full flex items-center justify-center text-5xl font-bold bg-gray-700">
+        {{ username.charAt(0).toUpperCase() }}
+      </div>
+      <div class="absolute bottom-0 w-full text-center text-sm bg-black/50 py-1">{{ username }}</div>
+    </div>
+
+    <ng-container *ngFor="let r of remoteStreams">
+      <div
+        class="relative w-48 h-48 rounded-lg bg-black/40 border border-white/20 overflow-hidden cursor-pointer"
+        [class.w-full]="selectedStream === r.peerId"
+        [class.h-auto]="selectedStream === r.peerId"
+        (click)="selectStream(r.peerId)"
+      >
+        <video
+          [id]="'remoteVideo_' + r.peerId"
+          autoplay
+          playsinline
+          *ngIf="r.cameraOn"
+          class="w-full h-full object-cover"
+        ></video>
+        <div *ngIf="!r.cameraOn" class="w-full h-full flex items-center justify-center text-5xl font-bold bg-gray-700">
+          {{ r.peerId.charAt(0).toUpperCase() }}
+        </div>
+        <div class="absolute bottom-0 w-full text-center text-sm bg-black/50 py-1">{{ r.peerId }}</div>
+      </div>
+    </ng-container>
+  </div>
+
+  <div class="flex flex-wrap gap-2 mt-4 flex-shrink-0">
+    <button class="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg transition" (click)="call()">Start Call</button>
+    <button class="bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg transition" (click)="endCall()">End Call</button>
+    <button class="bg-white/10 hover:bg-white/20 text-white text-sm px-4 py-2 rounded-lg transition" (click)="toggleCamera()">Toggle Camera</button>
+    <button class="bg-white/10 hover:bg-white/20 text-white text-sm px-4 py-2 rounded-lg transition" (click)="toggleMic()">Toggle Mic</button>
+    <button class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg transition" (click)="startScreenShare()">Share Screen</button>
+    <button class="bg-yellow-500 hover:bg-yellow-600 text-white text-sm px-4 py-2 rounded-lg transition" (click)="stopScreenShare()">Stop Sharing</button>
+  </div>
+
+  <div class="mt-4 flex items-center gap-3 flex-wrap bg-white/10 backdrop-blur-md border border-white/20 rounded-xl px-4 py-3 flex-shrink-0">
+    <input
+      [(ngModel)]="messageContent"
+      placeholder="Type a message..."
+      (keyup.enter)="sendMessage()"
+      (input)="onTyping()"
+      [disabled]="isRecording"
+      class="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none"
+    />
+
+    <div class="relative">
+      <label for="imageUpload" class="cursor-pointer text-lg">
+        📎
+      </label>
+      <input
+        #imageUpload
+        type="file"
+        id="imageUpload"
+        accept="image/*"
+        (change)="onImageSelected($event)"
+        [disabled]="isRecording || isUploadingAudio"
+        class="hidden"
+      />
+      <div *ngIf="selectedImage" class="absolute top-full left-0 mt-1 text-xs text-white bg-black/70 px-2 py-1 rounded shadow">
+        {{ getImageName() }}
+        <button (click)="removeSelectedImage()" class="ml-2 text-red-400 hover:text-red-300">✕</button>
+      </div>
+    </div>
+
+    <button
+      (click)="sendMessage()"
+      [disabled]="(!messageContent && !selectedImage) || isRecording || isUploadingAudio"
+      class="bg-purple-500 hover:bg-purple-600 text-white text-sm px-4 py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      Send
+    </button>
+
+    <div class="flex items-center gap-2">
+      <button
+        (click)="isRecording ? stopRecording() : startRecording()"
+        [disabled]="selectedImage || isUploadingAudio"
+        class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-2 rounded-lg transition disabled:opacity-50"
+      >
+        {{ isRecording ? 'Stop Recording' : 'Record Voice' }}
+      </button>
+
+      <span *ngIf="isRecording" class="text-red-400 text-sm font-medium">● Recording...</span>
+      <span *ngIf="isUploadingAudio && !isRecording" class="text-blue-400 text-sm">Uploading audio…</span>
+    </div>
+  </div>
+</div>

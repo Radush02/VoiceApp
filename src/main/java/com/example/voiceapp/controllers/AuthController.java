@@ -10,6 +10,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.security.Principal;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,15 +54,15 @@ public class AuthController {
               .secure(true)
               .path("/")
               .maxAge(60 * 60)
-              .sameSite("None")
+              .sameSite("Strict")
               .build();
 
       ResponseCookie refreshCookie = ResponseCookie.from("refresh", refreshToken)
               .httpOnly(true)
               .secure(true)
-              .path("/api/auth/refresh")
+              .path("/")
               .maxAge(60L * 60L * 24L * 30L)
-              .sameSite("None")
+              .sameSite("Strict")
               .build();
 
       response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
@@ -78,7 +79,7 @@ public class AuthController {
   }
 
   @PostMapping("/refresh")
-  public ResponseEntity<Map<String, String>> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+  public ResponseEntity<Map<String, String>> refreshToken(HttpServletRequest request, HttpServletResponse response, Principal principal) {
     String refreshToken = null;
 
     if (request.getCookies() != null) {
@@ -92,29 +93,62 @@ public class AuthController {
     if (refreshToken == null) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("Error", "Refresh token is missing"));
     }
-    String username = jwtUtil.extractUsername(refreshToken);
-    String newAccessToken = jwtUtil.generateToken(username);
+    
+    try {
+      if (!jwtUtil.isTokenValid(refreshToken, principal.getName())) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("Error", "Refresh token is invalid or expired"));
+      }
+      
+      String username = jwtUtil.extractUsername(refreshToken);
+      String newAccessToken = jwtUtil.generateToken(username);
+      String newRefreshToken = jwtUtil.generateRefreshToken(username);
 
-    ResponseCookie jwtCookie = ResponseCookie.from("jwt", newAccessToken)
-              .httpOnly(true)
-              .secure(false)
-              .path("/")
-              .maxAge(60 * 60)
-              .sameSite("Strict")
-              .build();
-
-      response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
-
-      return ResponseEntity.ok(Map.of("access", newAccessToken));
+      ResponseCookie jwtCookie = ResponseCookie.from("jwt", newAccessToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(60 * 60)
+                .sameSite("Strict")
+                .build();
+        ResponseCookie refreshCookie = ResponseCookie.from("refresh", newRefreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(60L * 60L * 24L * 30L)
+                .sameSite("Strict")
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+        return ResponseEntity.ok(Map.of("access", newAccessToken));
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("Error", "Token refresh failed: " + e.getMessage()));
+    }
     }
 
 
-  @PostMapping("/logout")
-  public ResponseEntity<?> logout(HttpServletResponse response) {
-    ResponseCookie cookie = ResponseCookie.from("jwt", "").httpOnly(true).secure(false).path("/").maxAge(0).build();
-    response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+@PostMapping("/logout")
+public ResponseEntity<?> logout(HttpServletResponse response) {
+    ResponseCookie jwtCookie = ResponseCookie.from("jwt", "")
+            .httpOnly(true)
+            .secure(true)
+            .path("/")
+            .maxAge(0)
+            .sameSite("None")
+            .build();
+            
+    ResponseCookie refreshCookie = ResponseCookie.from("refresh", "")
+            .httpOnly(true)
+            .secure(true)
+            .path("/")
+            .maxAge(0)
+            .sameSite("None")
+            .build();
+            
+    response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
+    response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+    
     return ResponseEntity.ok(Map.of("response", "Logged out successfully"));
-  }
+}
 
   @PostMapping("/check")
   public ResponseEntity<?> isAuthenticated(HttpServletRequest request) {

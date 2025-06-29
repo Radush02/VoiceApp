@@ -1,0 +1,160 @@
+<div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-lg max-h-[90vh] overflow-hidden">
+  
+  <!-- Header -->
+  <div class="relative bg-gradient-to-r from-red-600 to-orange-600 p-6">
+    <button 
+      (click)="close()"
+      class="absolute top-4 right-4 text-white/80 hover:text-white transition-colors duration-200"
+    >
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </button>
+
+    <div class="flex items-center space-x-4">
+      <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+        </svg>
+      </div>
+      <div>
+        <h2 class="text-white text-xl font-bold">Admin Actions</h2>
+        <p class="text-white/80 text-sm">Manage {{ data.member.username }}</p>
+      </div>
+    </div>
+  </div>
+
+    <!-- Member Info -->
+    <div class="p-6 border-b border-gray-700">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-full border-2 border-gray-600 overflow-hidden bg-gray-600 flex items-center justify-center">
+          <img 
+            *ngIf="data.member.imageLink; else avatarInitial" 
+            [src]="data.member.imageLink" 
+            [alt]="data.member.username + '\'s avatar'"
+            class="w-full h-full object-cover"
+          />
+          <ng-template #avatarInitial>
+            <span class="text-white text-sm font-bold">{{ data.member.username.charAt(0).toUpperCase() }}</span>
+          </ng-template>
+        </div>
+        <div>
+          <h3 class="text-white font-semibold">{{ data.member.username }}</h3>
+          <p class="text-gray-400 text-sm">{{ data.member.status || 'Member' }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Selection -->
+    <div class="p-6 space-y-4 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+      <h3 class="text-white font-semibold text-sm uppercase tracking-wide mb-4">Select Action</h3>
+      
+      <div class="grid grid-cols-1 gap-3">
+        <button
+          *ngFor="let action of [Action.KICK, Action.BAN, Action.MUTE, Action.UNBAN, Action.UNMUTE]"
+          (click)="selectAction(action)"
+          [class]="'p-4 rounded-lg border-2 transition-all duration-200 text-left ' + 
+                   (selectedAction === action ? 
+                    'border-blue-500 bg-blue-900/30' : 
+                    'border-gray-600 bg-gray-700/50 hover:border-gray-500 hover:bg-gray-700')"
+        >
+          <div class="flex items-start space-x-3">
+            <svg [class]="'w-5 h-5 mt-0.5 ' + getActionColor(action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="getActionIcon(action)"></path>
+            </svg>
+            <div class="flex-1">
+              <div class="text-white font-medium">{{ Action[action] }}</div>
+              <div class="text-gray-400 text-sm mt-1">{{ getActionDescription(action) }}</div>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <!-- Mute Duration Selection -->
+      <div *ngIf="selectedAction === Action.MUTE" class="mt-6 p-4 bg-gray-700/50 rounded-lg">
+        <h4 class="text-white font-semibold mb-3">Mute Duration</h4>
+        
+        <div class="space-y-3">
+          <select 
+            [(ngModel)]="selectedMuteDuration"
+            (ngModelChange)="onMuteDurationChange()"
+            class="w-full bg-gray-600 text-white rounded-lg px-3 py-2 border border-gray-500 focus:border-blue-500 focus:outline-none"
+          >
+            <option *ngFor="let duration of muteDurations" [value]="duration.value">
+              {{ duration.label }}
+            </option>
+          </select>
+
+          <!-- Custom Duration Input -->
+          <div *ngIf="selectedMuteDuration === -1" class="flex items-center space-x-2">
+            <input
+              type="number"
+              [(ngModel)]="customMuteMinutes"
+              (ngModelChange)="muteMinutes = customMuteMinutes"
+              min="1"
+              max="43200"
+              class="flex-1 bg-gray-600 text-white rounded-lg px-3 py-2 border border-gray-500 focus:border-blue-500 focus:outline-none"
+              placeholder="Minutes"
+            />
+            <span class="text-gray-400 text-sm">minutes</span>
+          </div>
+
+          <div class="text-gray-400 text-xs">
+            User will be muted for {{ muteMinutes }} minute{{ muteMinutes !== 1 ? 's' : '' }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Reason Input -->
+      <div *ngIf="selectedAction" class="mt-4">
+        <label class="block text-white font-semibold mb-2 text-sm">Reason (Optional)</label>
+        <textarea
+          [(ngModel)]="reason"
+          placeholder="Enter reason for this action..."
+          class="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-blue-500 focus:outline-none resize-none"
+          rows="3"
+          maxlength="500"
+        ></textarea>
+        <div class="text-gray-400 text-xs mt-1">{{ reason.length }}/500 characters</div>
+      </div>
+
+      <!-- Error Message -->
+      <div *ngIf="actionError" class="bg-red-900/50 border border-red-700 rounded-lg p-3">
+        <div class="flex items-center">
+          <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span class="text-red-300 text-sm">{{ actionError }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="border-t border-gray-700 p-4">
+      <div class="flex justify-between space-x-3">
+        <button 
+          (click)="close()"
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
+        >
+          Cancel
+        </button>
+        
+        <button 
+          *ngIf="selectedAction"
+          (click)="executeAction()"
+          [disabled]="isProcessing"
+          [class]="'px-6 py-2 rounded-lg transition-colors duration-200 text-sm font-medium flex items-center space-x-2 ' +
+                   (selectedAction === Action.BAN ? 'bg-red-600 hover:bg-red-700 disabled:bg-red-800' :
+                    selectedAction === Action.KICK ? 'bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-800' :
+                    selectedAction === Action.MUTE ? 'bg-orange-600 hover:bg-orange-700 disabled:bg-orange-800' :
+                    'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800') + ' text-white disabled:cursor-not-allowed'"
+        >
+          <svg *ngIf="isProcessing" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>{{ isProcessing ? 'Processing...' : 'Execute ' + (selectedAction ? Action[selectedAction] : '') }}</span>
+        </button>
+      </div>
+    </div>
+</div>

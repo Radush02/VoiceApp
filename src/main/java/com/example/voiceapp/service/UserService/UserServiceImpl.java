@@ -67,11 +67,10 @@ public class UserServiceImpl implements UserService {
   }
   
   @Override
-  public CompletableFuture<Map<String, String>> sendRequest(SendRequestDTO requestDTO) {
-    System.out.println(requestDTO.getUsername());
+  public CompletableFuture<Map<String, String>> sendRequest(String username) {
     User invitedUser =
         userRepository
-            .findByUsernameIgnoreCase(requestDTO.getUsername())
+            .findByUsernameIgnoreCase(username)
             .orElseThrow(() -> new NonExistentException("User not found"));
     User user =
         userRepository
@@ -204,8 +203,23 @@ public class UserServiceImpl implements UserService {
             });
   }
 
+  @Override
+  public CompletableFuture<Map<String, String>> uploadProfilePicture(MultipartFile file,String username) throws IOException {
+    User user = userRepository.findByUsernameIgnoreCase(username)
+            .orElseThrow(() -> new NonExistentException("User not found"));
 
-  
+    String fileName = "pfp/" + user.getUsername() + "." +
+            StringUtils.getFilenameExtension(file.getOriginalFilename());
+
+    return s3Service.uploadFile(fileName, file)
+            .thenApply(imageUrl -> {
+              user.setImageLink(imageUrl);
+              userRepository.save(user);
+              return Map.of("Response", "Profile picture uploaded.");
+            });
+  }
+
+
   @Override
   public CompletableFuture<Map<String,String>> updateAboutMe(SingleInputDTO input){
     User u = userRepository.findByUsernameIgnoreCase(SecurityContextHolder.getContext().getAuthentication().getName()).orElseThrow(() -> new NonExistentException("User not found"));

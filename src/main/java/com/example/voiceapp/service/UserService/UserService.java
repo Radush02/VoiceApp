@@ -15,7 +15,7 @@ public interface UserService {
 
   CompletableFuture<Set<String>> getRequests();
 
-  CompletableFuture<Map<String, String>> sendRequest(SendRequestDTO requestDTO);
+  CompletableFuture<Map<String, String>> sendRequest(String username);
 
     CompletableFuture<Map<String,Boolean>> areFriends(String friend);
 
@@ -27,6 +27,9 @@ public interface UserService {
 
   CompletableFuture<Map<String, String>> uploadProfilePicture(MultipartFile file)
       throws IOException;
+
+  CompletableFuture<Map<String,String>> uploadProfilePicture(MultipartFile file, String username) throws IOException;
+
 
   CompletableFuture<Map<String,String>> updateAboutMe(SingleInputDTO input);
 

@@ -30,3 +30,23 @@ export interface ChannelMembership {
     members: string[];
     imageLink?: string;
   }
+
+  export interface Message{
+      id: string;
+  sender: string;
+  channel?: string;
+  recipient?: string;
+  content: string;
+  attachment?: string;
+  date: Date;
+  mentions: string[];
+  seenBy: string[];
+  }
+
+  export interface AdminActionDTO {
+    action: string;
+    vanityId: string;
+    admin: string;
+    user: string;
+    mutedMinutes?: number;
+  }

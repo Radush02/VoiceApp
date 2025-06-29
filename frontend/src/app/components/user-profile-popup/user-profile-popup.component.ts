@@ -5,8 +5,11 @@ import { CommonModule, NgIf }   from '@angular/common';
 import { MatCardModule }        from '@angular/material/card';
 import { MatButtonModule }      from '@angular/material/button';
 import { UserService } from '../../services/user.service';
-import { MatIcon } from '@angular/material/icon';
 import { RequestResponse } from '../../enums/RequestResponse';
+import { AuthenticationService } from '../../services/authentication.service';
+import { WebsocketService } from '../../services/websocket.service';
+import { Router } from '@angular/router';
+import { DataRefreshService } from '../../services/datarefresh.service';
 @Component({
   selector: 'app-user-profile-popup',
   templateUrl: './user-profile-popup.component.html',
@@ -16,8 +19,7 @@ import { RequestResponse } from '../../enums/RequestResponse';
     CommonModule,    
     MatCardModule,
     MatButtonModule,
-    MatDialogModule,
-    MatIcon
+    MatDialogModule
   ],
 })
 export class UserProfilePopupComponent {
@@ -30,7 +32,11 @@ export class UserProfilePopupComponent {
   constructor(
     private dialogRef: MatDialogRef<UserProfilePopupComponent>,
     @Inject(MAT_DIALOG_DATA) public user: UserDTO | PublicUserDTO,
-    private userService: UserService
+    private userService: UserService,
+    private authService: AuthenticationService,
+    private websocketService: WebsocketService,
+    private router: Router,
+    private dataRefreshService: DataRefreshService
   ) {
     if (this.isSelf()) {
       this.channelsCount = (this.user as UserDTO).channels.length;
@@ -42,7 +48,7 @@ export class UserProfilePopupComponent {
       this.requestsCount = null;
       this.userService.areFriends(this.user.username).subscribe(
         (response) => {
-          this.isFriend = response.isFriend;
+          this.isFriend = response.Response;
         },
         (error) => {
           console.error('Error checking friendship status:', error);
@@ -86,13 +92,30 @@ export class UserProfilePopupComponent {
   }
     fetchPendingRequests() {
     this.userService.getPendingRequests().subscribe(
-      (requests) => {
-        this.pendingRequests = requests;
+      (requests:any) => {
+        this.pendingRequests = requests.requests;
       },
       (error) => {
         console.error('Error fetching pending requests:', error);
       }
     );
+  }
+
+  logout() {
+    this.authService.logout().subscribe({
+      next: () => {
+        this.websocketService.disconnect();
+        this.dialogRef.close();
+        this.router.navigate(['/login']);
+        this.dataRefreshService.triggerRefresh('sidebar');
+      },
+      error: (error) => {
+        console.error('Logout error:', error);
+        this.websocketService.disconnect();
+        this.dialogRef.close();
+        this.router.navigate(['/login']);
+      }
+    });
   }
 
   processRequest(username: string, response: RequestResponse) {
@@ -101,7 +124,9 @@ export class UserProfilePopupComponent {
         console.log(`Request ${response.toLowerCase()} successfully for ${username}`);
         this.pendingRequests = this.pendingRequests.filter((req) => req !== username);
         this.requestsCount = this.pendingRequests.length;
-      },
+        if(response=== RequestResponse.ACCEPTED) {
+          this.router.navigate(['/']);
+      }},
       (error) => {
         console.error('Error processing request:', error);
       }

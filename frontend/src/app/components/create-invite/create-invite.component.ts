@@ -32,7 +32,7 @@ servers: any[] = [];
 
   constructor(private channelService: ChannelService, private router: Router) {}
   close(){
-    this.router.navigate(['/']);
+    this.router.navigate(['/chat',this.vanityId] );
   }
   createInviteLink() {
   if (!this.vanityId) {

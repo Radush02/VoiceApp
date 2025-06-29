@@ -3,6 +3,8 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from "@angula
 import { Router } from "@angular/router"
 import { CommonModule } from "@angular/common"
 import { AuthenticationService } from "../../services/authentication.service"
+import { WebsocketService } from "../../services/websocket.service"
+import { DataRefreshService } from "../../services/datarefresh.service"
 @Component({
   selector: "app-login",
   templateUrl: "./login.component.html",
@@ -18,7 +20,9 @@ export class LoginComponent implements OnInit {
   constructor(
     private formBuilder: FormBuilder,
     private router: Router,
-    private authenticationService: AuthenticationService
+    private authenticationService: AuthenticationService,
+    private websocketService: WebsocketService,
+    private dataRefreshService: DataRefreshService,
   ) {}
 
   ngOnInit(): void {
@@ -27,6 +31,7 @@ export class LoginComponent implements OnInit {
       password: ["", [Validators.required, Validators.minLength(6)]],
       rememberMe: [false],
     })
+    this.dataRefreshService.triggerRefresh('sidebar');
   }
 
   onSubmit(): void {
@@ -38,6 +43,7 @@ export class LoginComponent implements OnInit {
       .subscribe(
         (response) => {
           if (response) {
+            this.websocketService.connectIfNeeded();
             this.router.navigate(["/chat"])
           } else {
             this.showError = true

@@ -19,9 +19,20 @@ export class UserService {
   getUserInfo(user: string): Observable<any>;
   getUserInfo(user?: string): Observable<any> {
     if (user) {
-      return this.http.get(`${this.apiLink}/info/${user}`, { withCredentials: true });
+      const encodedUser = encodeURIComponent(user);
+      const url = `${this.apiLink}/info/${encodedUser}`;
+      return this.http.get(url, { withCredentials: true }).pipe(
+        map((response: any) => {
+          return response;
+        })
+      );
     } else {
-      return this.http.get(`${this.apiLink}/info`, { withCredentials: true });
+      const url = `${this.apiLink}/info`;
+      return this.http.get(url, { withCredentials: true }).pipe(
+        map((response: any) => {
+          return response;
+        })
+      );
     }
   }
   updateAboutMe(aboutMe: string): Observable<any> {
@@ -33,6 +44,9 @@ export class UserService {
   updateProfilePicture(formData: FormData): Observable<any> {
     return this.http.post(`${this.apiLink}/upload`, formData, { withCredentials: true });
   }
+    updateProfilePictureRegister(formData: FormData): Observable<any> {
+    return this.http.post(`${this.apiLink}/upload/register`, formData, { withCredentials: true });
+  }
   getFriends(): Observable<any> {
     return this.http.get(`${this.apiLink}/friends`, { withCredentials: true });
   }
@@ -41,10 +55,12 @@ export class UserService {
     return this.http.get(`${this.apiLink}/friends/${user}`, { withCredentials: true });
   }
   getPendingRequests(): Observable<string[]> {
-  return this.http.get<string[]>('/api/user/getRequests');
+  return this.http.get<string[]>(`${this.apiLink}/getRequests`, { withCredentials: true });
 }
-
+  sendFriendRequest(username: string): Observable<any> {
+  return this.http.post(`${this.apiLink}/sendRequest/${username}`, {}, { withCredentials: true });
+  }
 processFriendRequest(data: { username: string; response: RequestResponse }): Observable<void> {
-  return this.http.post<void>('/api/user/processRequest', data);
+  return this.http.post<void>(`${this.apiLink}/processRequest`, data, { withCredentials: true });
 }
 }

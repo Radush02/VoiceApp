@@ -1,6 +1,7 @@
-<div class="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center p-4">
+<div class="h-screen overflow-y-auto bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 py-8 px-4 custom-scrollbar">
   <div class="absolute inset-0 bg-black/20"></div>
-  <div class="relative w-full max-w-md my-8">
+
+  <div class="relative w-full max-w-md mx-auto">
     <div class="text-center mb-6">
       <div class="inline-flex items-center justify-center w-16 h-16 bg-white/10 backdrop-blur-sm rounded-2xl mb-4">
         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -20,6 +21,7 @@
           <span class="text-red-300 text-sm">{{ errorMessage }}</span>
         </div>
       </div>
+
       <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="space-y-5">
         <div>
           <label for="username" class="block text-sm font-medium text-gray-200 mb-1">
@@ -45,6 +47,7 @@
             <span *ngIf="registerForm.get('username')?.errors?.['invalidUsername']">Username must be 3-20 characters and contain only letters, numbers, periods, underscores, or hyphens</span>
           </div>
         </div>
+
         <div>
           <label for="email" class="block text-sm font-medium text-gray-200 mb-1">
             Email
@@ -130,7 +133,8 @@
               <svg *ngIf="!selectedFile" class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
               </svg>
-<img *ngIf="selectedFile" [src]="selectedFile ? selectedFile : ''" alt="Profile preview" class="w-full h-full object-cover" />            </div>
+              <img *ngIf="selectedFile" [src]="selectedFile ? selectedFile : ''" alt="Profile preview" class="w-full h-full object-cover" />
+            </div>
             <label class="cursor-pointer bg-white/10 hover:bg-white/20 text-white py-2 px-4 rounded-lg transition-colors duration-200">
               <span>Choose file</span>
               <input type="file" class="hidden" accept="image/*" (change)="onFileSelected($event)" />
@@ -164,7 +168,7 @@
       <div class="text-center">
         <p class="text-gray-300 text-sm">
           Already have an account?
-          <a routerLink="/login" class="text-purple-400 hover:text-purple-300 font-medium ml-1 transition-colors duration-200">
+          <a (click)="toLogin()" class="text-purple-400 hover:text-purple-300 font-medium ml-1 transition-colors duration-200 cursor-pointer">
             Sign in
           </a>
         </p>
@@ -206,6 +210,7 @@
         </li>
       </ul>
     </div>
+
     <div class="text-center mt-6">
       <p class="text-gray-400 text-xs">
         This application is just a Proof of Concept (PoC) for a chat application for a thesis.

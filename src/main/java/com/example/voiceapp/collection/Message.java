@@ -21,4 +21,5 @@ public class Message {
   private String attachment;
   private Date date;
   private Set<String> mentions = new HashSet<>();
+  private Set<String> seenBy = new HashSet<>();
 }

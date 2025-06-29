@@ -151,19 +151,29 @@
     </div>
 
     <div class="border-t border-gray-700 p-4">
-      <div class="flex justify-end space-x-3">
+      <div class="flex justify-between space-x-3">
         <button 
-          *ngIf="!isSelf() && !isFriend"
-          class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
+          *ngIf="isSelf()"
+          (click)="logout()"
+          class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
         >
-          Send Friend Request
+          Logout
         </button>
-                <button 
-          (click)="close()"
-          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
-        >
-          Close
-        </button>
+        
+        <div class="flex space-x-3 ml-auto">
+          <button 
+            *ngIf="!isSelf() && !isFriend"
+            class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
+          >
+            Send Friend Request
+          </button>
+          <button 
+            (click)="close()"
+            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   </div>

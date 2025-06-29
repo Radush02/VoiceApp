@@ -47,7 +47,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                     .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                    .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/logout","/api/auth/refresh").permitAll()
+                    .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/logout","/api/auth/refresh","/api/user/upload/register").permitAll()
                     .anyRequest().authenticated()
             )
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

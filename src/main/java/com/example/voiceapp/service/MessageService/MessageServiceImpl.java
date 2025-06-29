@@ -1,10 +1,12 @@
 package com.example.voiceapp.service.MessageService;
 
+import com.amazonaws.services.kms.model.NotFoundException;
 import com.example.voiceapp.Enum.NotificationType;
 import com.example.voiceapp.collection.Channel;
 import com.example.voiceapp.collection.Message;
 import com.example.voiceapp.collection.User;
 import com.example.voiceapp.dtos.NotificationDTO;
+import com.example.voiceapp.dtos.SeenReceiptDTO;
 import com.example.voiceapp.exceptions.NonExistentException;
 import com.example.voiceapp.exceptions.NotPermittedException;
 import com.example.voiceapp.repository.ChannelRepository;
@@ -43,6 +45,15 @@ public class MessageServiceImpl implements MessageService {
         throw new NotPermittedException("You are not allowed to send a message in this channel.");
       }
       if (c.getMutedMembers().containsKey(sender) && c.getMutedMembers().get(sender).after(new Date())) {
+        NotificationDTO mentionNotification = new NotificationDTO(
+                NotificationType.MESSAGE,
+                "You are muted until "+c.getMutedMembers().get(sender)
+        );
+        messagingTemplate.convertAndSendToUser(
+                sender,
+                "/queue/notifications",
+                mentionNotification
+        );
         throw new NotPermittedException("You are muted until " + c.getMutedMembers().get(sender));
       }
 
@@ -103,7 +114,6 @@ public class MessageServiceImpl implements MessageService {
       if (!senderUser.getFriends().contains(recipient)) {
         throw new NotPermittedException("Cannot send DM to non-friend.");
       }
-
       message.setSender(sender);
       message.setRecipient(recipient);
       message.setChannel(null);
@@ -143,7 +153,52 @@ public class MessageServiceImpl implements MessageService {
 
       Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "date"));
 
-      return messageRepository.findAllBySenderAndRecipient(sender, recipient, pageable).stream().sorted(Comparator.comparing(Message::getDate)).collect(Collectors.toList());
+      // Fetch messages in both directions of the conversation
+      return messageRepository.findAllByConversation(sender, recipient, pageable)
+              .stream()
+              .sorted(Comparator.comparing(Message::getDate))
+              .collect(Collectors.toList());
     });
+  }
+
+  @Override
+  public void handleSeen(String reader, SeenReceiptDTO seenReceipt) {
+    if(!userRepository.existsByUsername(reader)) {
+      throw new NonExistentException("Reader doesn't exist");
+    }
+    String senderName = null;
+    User u = userRepository.findByUsernameIgnoreCase(reader).orElseThrow(()-> new NotFoundException("User not found"));
+    List<Message> messages = new ArrayList<>();
+    if(seenReceipt.getChannelId() != null) {
+      Channel c = channelRepository.findByVanityId(seenReceipt.getChannelId()).orElseThrow(()-> new NotFoundException("Channel doesn't exist"));
+      if(!c.getMembers().containsKey(u.getUsername())) {
+        throw new NotPermittedException("Cannot see messages from channels you're not a member of.");
+      }
+    }
+    if(seenReceipt.getRecipientId()!=null){
+      User sender = userRepository.findByUsernameIgnoreCase(seenReceipt.getRecipientId()).orElseThrow(()->new NonExistentException("User not found"));
+      if(!sender.getFriends().contains(u.getUsername())) {
+        throw new NotPermittedException("Cannot see messages from senders you're not friends with.");
+      }
+      senderName = sender.getUsername();
+    }
+    for(String ids : seenReceipt.getMessageIds()){
+      messageRepository.findById(ids).ifPresent(m -> {
+        boolean isSeen = m.getSeenBy().add(u.getUsername());
+        if(isSeen){
+          messageRepository.save(m);
+          messages.add(m);
+        }
+      });
+    }
+    if(!messages.isEmpty()){
+      if(seenReceipt.getChannelId()!=null){
+        messagingTemplate.convertAndSend("/channel/"+seenReceipt.getChannelId(), messages);
+      }
+      else if(senderName!=null){
+        messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/messages",messages);
+        messagingTemplate.convertAndSendToUser(senderName, "/queue/messages", messages);
+      }
+    }
   }
 }

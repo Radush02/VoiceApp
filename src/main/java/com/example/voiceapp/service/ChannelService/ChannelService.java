@@ -1,9 +1,6 @@
 package com.example.voiceapp.service.ChannelService;
 
-import com.example.voiceapp.dtos.AdminActionDTO;
-import com.example.voiceapp.dtos.ChannelDTO;
-import com.example.voiceapp.dtos.CreateInviteDTO;
-import com.example.voiceapp.dtos.UserDTO;
+import com.example.voiceapp.dtos.*;
 
 import java.io.IOException;
 import java.util.List;
@@ -21,4 +18,10 @@ public interface ChannelService {
   CompletableFuture<Set<UserDTO>> getUsers(String channel);
 
   CompletableFuture<Map<String, String>> handleAdminAction(AdminActionDTO action);
+
+  CompletableFuture<GetChannelDTO> getChannel(String vanityId);
+
+  CompletableFuture<Map<String,Boolean>> inServer(InServerDTO inServerDTO);
+
+  CompletableFuture<Map<String,String>> getServerFromInvite(String inviteCode);
 }

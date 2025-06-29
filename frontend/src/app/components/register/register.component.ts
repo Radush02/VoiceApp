@@ -66,6 +66,34 @@ export class RegisterComponent implements OnInit {
     }
   }
 
+  toLogin(): void {
+    this.router.navigate(["/login"]);
+  }
+
+  private uploadProfilePictureWithRetry(formData: FormData, attempt: number = 1, maxRetries: number = 3): void {
+    const baseDelay = 500; 
+    this.userService.updateProfilePictureRegister(formData).subscribe(
+      () => {
+        this.router.navigate(["/login"]);
+      },
+      (error) => {
+        console.log(`Profile picture upload attempt ${attempt} failed:`, error);
+        
+        if (attempt < maxRetries) {
+          const delay = baseDelay * Math.pow(2, attempt - 1);
+          console.log(`Retrying profile picture upload in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+          
+          setTimeout(() => {
+            this.uploadProfilePictureWithRetry(formData, attempt + 1, maxRetries);
+          }, delay);
+        } else {
+          console.log("Profile picture upload failed after all retries. User account created successfully.");
+          this.router.navigate(["/login"]);
+        }
+      }
+    );
+  }
+
   onSubmit(): void {
     if (this.registerForm.invalid) {
       return;
@@ -87,13 +115,7 @@ export class RegisterComponent implements OnInit {
           this.isLoading = false;
           if (response) {
             if (this.selectedFile) {
-              this.userService.updateProfilePicture(formData).subscribe(
-                () => this.router.navigate(["/login"]),
-                (error) => {
-                  console.log("Profile picture upload error:", error);
-                  this.showError = true;
-                }
-              );
+              this.uploadProfilePictureWithRetry(formData);
             } else {
               this.router.navigate(["/login"]);
             }

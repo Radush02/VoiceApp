@@ -1,0 +1,101 @@
+<div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
+  <div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md overflow-hidden">
+    
+    <div class="bg-gradient-to-r from-purple-600 to-pink-600 p-5">
+      <div class="flex items-center justify-between">
+        <h2 class="text-white text-xl font-bold">Join Server</h2>
+        <button 
+          (click)="goBack()"
+          class="text-white/80 hover:text-white transition-colors duration-200"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="p-6">
+      <div *ngIf="errorMessage" class="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+        <div class="flex items-center">
+          <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span class="text-red-300 text-sm">{{ errorMessage }}</span>
+        </div>
+      </div>
+      <div *ngIf="successMessage" class="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
+        <div class="flex items-center">
+          <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          <span class="text-green-300 text-sm">{{ successMessage }}</span>
+        </div>
+      </div>
+      <div *ngIf="isLoadingServerInfo" class="text-center py-8">
+        <div class="flex items-center justify-center mb-4">
+          <svg class="animate-spin h-8 w-8 text-purple-500" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+        <p class="text-gray-400">Loading server information...</p>
+      </div>
+      <div *ngIf="serverInfo && !isLoadingServerInfo" class="space-y-6">
+        <div class="text-center">
+          <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center overflow-hidden">
+            <img 
+              *ngIf="serverInfo.photo" 
+              [src]="serverInfo.photo" 
+              [alt]="serverInfo.name"
+              class="w-full h-full object-cover"
+            />
+            <svg *ngIf="!serverInfo.photo" class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+            </svg>
+          </div>
+          
+          <h2 class="text-xl font-bold text-white mb-2">{{ serverInfo.name }}</h2>
+          <div class="flex items-center justify-center text-gray-400 text-sm">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+            <span>Server ID: {{ serverInfo.vanityId }}</span>
+          </div>
+        </div>
+        <div class="bg-gray-700/50 rounded-lg p-4">
+          <p class="text-gray-300 text-sm text-center">
+            You've been invited to join <span class="font-semibold text-white">{{ serverInfo.name }}</span>
+          </p>
+        </div>
+
+        <button
+          (click)="joinServer()"
+          [disabled]="isLoading"
+          class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:scale-100 disabled:cursor-not-allowed flex items-center justify-center"
+        >
+          <span *ngIf="!isLoading">Join Server</span>
+          <div *ngIf="isLoading" class="flex items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Joining...
+          </div>
+        </button>
+      <div *ngIf="!serverInfo && !isLoadingServerInfo && errorMessage" class="text-center py-8">
+        <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <h3 class="text-lg font-semibold text-white mb-2">Invalid Invite</h3>
+        <p class="text-gray-400 mb-6">This invite link is invalid or has expired.</p>
+        <button
+          (click)="goBack()"
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium border border-gray-600"
+        >
+          Go Back Home
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

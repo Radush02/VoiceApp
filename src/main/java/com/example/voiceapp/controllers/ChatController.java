@@ -3,6 +3,7 @@ package com.example.voiceapp.controllers;
 
 import com.example.voiceapp.collection.Message;
 
+import com.example.voiceapp.dtos.SeenReceiptDTO;
 import com.example.voiceapp.dtos.SignalMessageDTO;
 import com.example.voiceapp.exceptions.AlreadyExistsException;
 import com.example.voiceapp.exceptions.NonExistentException;
@@ -10,6 +11,8 @@ import com.example.voiceapp.exceptions.NotPermittedException;
 
 
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import com.example.voiceapp.service.CallService.CallService;
@@ -35,6 +38,7 @@ public class ChatController {
     return new ResponseEntity<>(Map.of("active", active), HttpStatus.OK);
   }
 
+
   @PostMapping("/api/call/{channel}/join")
   public ResponseEntity<Map<String, Boolean>> joinCall(@PathVariable String channel, Principal principal) {
     if (principal == null) {
@@ -44,6 +48,7 @@ public class ChatController {
     boolean isInitiator = callService.attemptJoinCall(channel, username);
     return new ResponseEntity<>(Map.of("isInitiator", isInitiator), HttpStatus.OK);
   }
+
 
   @MessageMapping("/sendMessage/{channel}")
   public void sendMessage(@DestinationVariable String channel,
@@ -85,8 +90,15 @@ public class ChatController {
     if (principal == null) {
       throw new NotPermittedException("Unauthorized");
     }
-    messageService.processDirectMessage(principal.getName(), recipient, message);
-    messagingTemplate.convertAndSendToUser(recipient, "/queue/messages", message);
+    String username = principal.getName();
+    messageService.processDirectMessage(username, recipient, message)
+            .thenAccept(savedMessage -> {
+              // Send message to recipient
+              messagingTemplate.convertAndSendToUser(recipient, "/queue/messages", savedMessage);
+              
+              // Send message back to sender for confirmation
+              messagingTemplate.convertAndSendToUser(username, "/queue/messages", savedMessage);
+            });
   }
 
   @MessageMapping("/signal/{channel}")
@@ -104,6 +116,11 @@ public class ChatController {
       callService.userLeft(channel, username);
     }
     messagingTemplate.convertAndSend("/channel/" + channel + "/signal", msg);
+  }
+
+  @MessageMapping("/seen")
+  public void handleSeen(SeenReceiptDTO seenReceipt, Principal principal) {
+    messageService.handleSeen(principal.getName(), seenReceipt);
   }
 
   @ExceptionHandler(AlreadyExistsException.class)

@@ -50,10 +50,10 @@ public class UserController {
     return output;
   }
 
-  @PostMapping("/sendRequest")
-  public DeferredResult<ResponseEntity<Map<String, String>>> sendRequest(@RequestBody SendRequestDTO requestDTO) {
+  @PostMapping("/sendRequest/{username}")
+  public DeferredResult<ResponseEntity<Map<String, String>>> sendRequest(@PathVariable String username) {
     DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
-    userService.sendRequest(requestDTO).thenAccept(response ->
+    userService.sendRequest(username).thenAccept(response ->
             output.setResult(new ResponseEntity<>(response, HttpStatus.OK))
     ).exceptionally(ex -> {
       output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -87,6 +87,24 @@ public class UserController {
               .body(Map.of("Error", ex.getMessage())));
       return null;
     });
+    return output;
+  }
+  @PostMapping("/upload/register")
+  @CrossOrigin(origins = "*", allowedHeaders = "*", exposedHeaders = "Content-Disposition")
+  public DeferredResult<ResponseEntity<Map<String, String>>> upload(
+          @RequestParam("file") MultipartFile file,
+          @RequestParam("username") String username) throws IOException {
+
+    DeferredResult<ResponseEntity<Map<String, String>>> output = new DeferredResult<>();
+
+    userService.uploadProfilePicture(file,username)
+            .thenAccept(response -> output.setResult(ResponseEntity.ok(response)))
+            .exceptionally(ex -> {
+              output.setErrorResult(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                      .body(Map.of("Error", ex.getMessage())));
+              return null;
+            });
+
     return output;
   }
 
