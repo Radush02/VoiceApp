@@ -10,6 +10,8 @@ import { AuthenticationService } from '../../services/authentication.service';
 import { WebsocketService } from '../../services/websocket.service';
 import { Router } from '@angular/router';
 import { DataRefreshService } from '../../services/datarefresh.service';
+import { EditAboutMePopupComponent } from '../edit-about-me-popup/edit-about-me-popup.component';
+import { MatDialog } from '@angular/material/dialog';
 @Component({
   selector: 'app-user-profile-popup',
   templateUrl: './user-profile-popup.component.html',
@@ -36,7 +38,8 @@ export class UserProfilePopupComponent {
     private authService: AuthenticationService,
     private websocketService: WebsocketService,
     private router: Router,
-    private dataRefreshService: DataRefreshService
+    private dataRefreshService: DataRefreshService,
+      private dialog: MatDialog 
   ) {
     if (this.isSelf()) {
       this.channelsCount = (this.user as UserDTO).channels.length;
@@ -64,9 +67,24 @@ export class UserProfilePopupComponent {
   close() {
     this.dialogRef.close();
   }
-  editAboutMe() {
-    this.dialogRef.close({ action: 'editAboutMe' });
-  }
+editAboutMe() {
+  const dialogRef = this.dialog.open(EditAboutMePopupComponent, {
+    data: { currentAboutMe: this.user.aboutMe },
+    disableClose: false,
+    hasBackdrop: true,
+    panelClass: 'custom-dialog-container'
+  });
+
+  dialogRef.afterClosed().subscribe(result => {
+    if (result && result.action === 'updated') {
+      // Update the user object with the new about me text
+      this.user.aboutMe = result.newAboutMe;
+      
+      // Optionally trigger a data refresh
+      this.dataRefreshService.triggerRefresh('user-profile');
+    }
+  });
+}
   onImageSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {

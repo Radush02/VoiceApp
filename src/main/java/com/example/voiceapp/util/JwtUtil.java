@@ -23,7 +23,7 @@ public class JwtUtil {
     return Jwts.builder()
         .claim("sub", username)
         .issuedAt(Date.from(now))
-        .expiration(Date.from(now.plus(2, ChronoUnit.MINUTES))) // 2 minutes for testing
+        .expiration(Date.from(now.plus(12, ChronoUnit.HOURS)))
         .signWith(
             Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)),
             SignatureAlgorithm.HS256)

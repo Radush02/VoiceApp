@@ -67,21 +67,21 @@ export class AuthenticationService {
 
   private startTokenRefresh() {
     this.stopTokenRefresh();
-    // Refresh token every 50 minutes (10 minutes before expiry)
-    this.refreshTimer = timer(50 * 60 * 1000, 50 * 60 * 1000).subscribe(() => {
+    const refreshInterval = this.calculateOptimalRefreshTime();
+    console.log(`Starting token refresh every ${refreshInterval / 1000 / 60} minutes`);
+    
+    this.refreshTimer = timer(refreshInterval, refreshInterval).subscribe(() => {
       this.refreshToken().subscribe({
         next: (response) => {
           console.log('Token refreshed successfully');
         },
         error: (error) => {
           console.error('Token refresh failed:', error);
-          // Only logout if it's an authentication error (401/403)
           if (error.status === 401 || error.status === 403) {
             console.log('Authentication failed, logging out');
             this.logout().subscribe();
           } else {
             console.log('Network or other error, will retry on next interval');
-            // For network errors, we'll just wait for the next refresh attempt
           }
         }
       });
@@ -93,6 +93,16 @@ export class AuthenticationService {
       this.refreshTimer.unsubscribe();
       this.refreshTimer = null;
     }
+  }
+
+  private getTokenExpirationTime(): number {
+      return 120 * 60 * 1000;
+  }
+
+  private calculateOptimalRefreshTime(): number {
+    const tokenLifetime = this.getTokenExpirationTime();
+    return Math.floor(tokenLifetime * 0.67);
+
   }
 
 }

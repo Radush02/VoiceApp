@@ -20,7 +20,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
   @Override
   public void registerStompEndpoints(StompEndpointRegistry registry) {
-    registry.addEndpoint("/ws").setAllowedOrigins("https://192.168.1.201:4200").addInterceptors(jwtHandshakeInterceptor).setHandshakeHandler(new UserHandshakeHandler());
+    registry.addEndpoint("/ws").setAllowedOrigins("https://radush.ro").addInterceptors(jwtHandshakeInterceptor).setHandshakeHandler(new UserHandshakeHandler());
 
   }
 

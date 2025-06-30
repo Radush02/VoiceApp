@@ -61,7 +61,7 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.addAllowedOriginPattern("https://192.168.1.201:4200");
+    configuration.addAllowedOriginPattern("https://radush.ro");
     configuration.setAllowCredentials(true);
     configuration.addAllowedMethod("*");
     configuration.addAllowedHeader("*");

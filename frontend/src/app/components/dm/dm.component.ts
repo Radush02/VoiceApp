@@ -72,7 +72,6 @@ export class DmComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.authService.getUsername().subscribe((username) => {
       this.username = username
       console.log("Username:", this.username)
-      // Check if we can load DM data now that we have username
       if (this.recipient && this.username) {
         this.loadDMData()
       }
@@ -80,7 +79,6 @@ export class DmComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.params.params.subscribe((params) => {
       this.recipient = params["recipient"]
       console.log("Recipient from params:", this.recipient)
-      // Check if we can load DM data now that we have recipient
       if (this.recipient && this.username) {
         this.loadDMData()
       }
@@ -124,7 +122,6 @@ export class DmComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.websocketService.unsubscribeFromChannel("/user/queue/messages");
     this.websocketService.unsubscribeFromChannel("/user/queue/typing");
     
-    // Ensure WebSocket is connected before subscribing
     if (!this.websocketService.isWebSocketConnected()) {
       console.log("WebSocket not connected, attempting to connect...");
       this.websocketService.connectIfNeeded();
@@ -141,7 +138,6 @@ export class DmComponent implements OnInit, OnDestroy, AfterViewChecked {
         console.log("Current recipient:", this.recipient);
         console.log("Current username:", this.username);
         
-        // Check if this message belongs to this conversation
         const isForThisConversation = 
           (message.sender === this.recipient && message.recipient === this.username) ||
           (message.sender === this.username && message.recipient === this.recipient);
@@ -151,12 +147,11 @@ export class DmComponent implements OnInit, OnDestroy, AfterViewChecked {
         if (message && isForThisConversation) {
           console.log("Message is for this conversation, checking for duplicates...");
           
-          // Check for duplicates to avoid adding the same message twice
           const isDuplicate = this.receivedMessages.some(existingMsg => 
             existingMsg.sender === message.sender &&
             existingMsg.content === message.content &&
             existingMsg.attachment === message.attachment &&
-            Math.abs(new Date(existingMsg.date).getTime() - new Date(message.date).getTime()) < 1000 // Within 1 second
+            Math.abs(new Date(existingMsg.date).getTime() - new Date(message.date).getTime()) < 1000
           );
           
           console.log("Is duplicate:", isDuplicate);
@@ -166,7 +161,6 @@ export class DmComponent implements OnInit, OnDestroy, AfterViewChecked {
             console.log("Adding message to receivedMessages array");
             this.receivedMessages.push(message)
             console.log("New messages count:", this.receivedMessages.length);
-            // Only send seen receipt for messages we receive (not our own)
             if (message.sender === this.recipient) {
               this.sendSeenReceipt([message])
             }
@@ -181,7 +175,6 @@ export class DmComponent implements OnInit, OnDestroy, AfterViewChecked {
       })
     })
 
-    // Subscribe to typing notifications for DMs
     this.websocketService.subscribeToUserQueue("/user/queue/typing", (typingData: any) => {
       this.ngZone.run(() => {
         console.log("Received typing notification:", typingData);
@@ -256,13 +249,11 @@ export class DmComponent implements OnInit, OnDestroy, AfterViewChecked {
       content: this.messageContent.trim(),
       recipient: this.recipient,
       attachment: imageUrl,
-      date: new Date().toISOString(), // Add timestamp
+      date: new Date().toISOString(),
     }
 
     console.log("Sending message via WebSocket:", message);
     console.log("WebSocket connected:", this.websocketService.isWebSocketConnected());
-
-    // Send the message via WebSocket - the server will echo it back to both users
     this.websocketService.sendPrivateMessage(this.recipient, message)
 
     this.messageContent = ""
@@ -272,7 +263,6 @@ export class DmComponent implements OnInit, OnDestroy, AfterViewChecked {
   onTyping(): void {
     const now = Date.now()
     if (now - this.lastTypingTime > this.typingCooldown) {
-      // Send typing notification for DM using the correct mapping
       this.websocketService.sendTypingPrivate(this.recipient)
       this.lastTypingTime = now
     }
@@ -322,7 +312,9 @@ export class DmComponent implements OnInit, OnDestroy, AfterViewChecked {
       type: "audio/webm; codecs=opus",
     })
 
-    const filename = `dm-${this.recipient}/${uuidv4()}.webm`
+    const sortedUsers = [this.username, this.recipient].sort();
+    const folderName = `dm-${sortedUsers[0]}-${sortedUsers[1]}`;
+    const filename = `${folderName}/${uuidv4()}.webm`
     const audioFile = new File([audioBlob], filename, {
       type: "audio/webm",
       lastModified: Date.now(),
@@ -346,67 +338,112 @@ export class DmComponent implements OnInit, OnDestroy, AfterViewChecked {
       date: new Date().toISOString(),
     }
     
-    // Send the message via WebSocket - the server will echo it back to both users
     this.websocketService.sendPrivateMessage(this.recipient, message)
     this.isUploadingAudio = false
   }
 
   async call() {
-    if (!this.recipient) return
+    console.log("=== DM Call Debug ===");
+    console.log("Recipient:", this.recipient);
+    console.log("Call active:", this.isCallActive);
+    console.log("Local video element:", this.localVideo?.nativeElement);
+    
+    if (!this.recipient) {
+      console.log("No recipient, returning");
+      return;
+    }
     if (this.isCallActive) {
-      return
+      console.log("Call already active, returning");
+      return;
     }
 
+    const sortedUsers = [this.username, this.recipient].sort();
+    const channelId = `dm-${sortedUsers[0]}-${sortedUsers[1]}`;
+    
     let isInitiator: boolean
     try {
-      const resp = await firstValueFrom(this.chatService.joinCall(`dm-${this.recipient}`))
+      console.log("Attempting to join call with channel:", channelId);
+      const resp = await firstValueFrom(this.chatService.joinCall(channelId))
       isInitiator = resp.isInitiator
+      console.log("Join call response - isInitiator:", isInitiator);
     } catch (err) {
       console.error("Failed to join call:", err)
       return
     }
 
     this.isCallActive = true
+    console.log("Call marked as active");
 
     if (isInitiator) {
+      console.log("Initializing as initiator...");
       await this.webrtc.initAsInitiator(
-        `dm-${this.recipient}`,
+        channelId,
         this.localVideo.nativeElement,
         (peerId: string, stream: MediaStream) => {
-          this.remoteStreams.push({
-            peerId,
-            stream,
-            cameraOn: stream.getVideoTracks().some((track) => track.enabled),
-          })
+          console.log("Remote stream received from peer:", peerId);
+          const existingStreamIndex = this.remoteStreams.findIndex(s => s.peerId === peerId);
+          if (existingStreamIndex > -1) {
+            console.log("Updating existing stream for peer:", peerId);
+            this.remoteStreams[existingStreamIndex].stream = stream;
+            this.remoteStreams[existingStreamIndex].cameraOn = stream.getVideoTracks().some(track => track.enabled);
+          } else {
+            console.log("Adding new stream for peer:", peerId);
+            this.remoteStreams.push({ peerId, stream, cameraOn: stream.getVideoTracks().some(track => track.enabled) });
+          }
           this.cdr.markForCheck()
           setTimeout(() => {
             const vid: HTMLVideoElement | null = document.getElementById(`remoteVideo_${peerId}`) as HTMLVideoElement
             if (vid) {
+              console.log("Setting video element source for peer:", peerId);
               vid.srcObject = stream
+            } else {
+              console.log("Video element not found for peer:", peerId);
             }
           }, 0)
         },
+        (peerId: string) => {
+          console.log("Peer left:", peerId);
+          this.remoteStreams = this.remoteStreams.filter(s => s.peerId !== peerId);
+          this.cdr.markForCheck();
+        }
       )
+      console.log("Initiator initialization complete");
     } else {
+      console.log("Initializing as joiner...");
       await this.webrtc.initAsJoiner(
-        `dm-${this.recipient}`,
+        channelId,
         this.localVideo.nativeElement,
         (peerId: string, stream: MediaStream) => {
-          this.remoteStreams.push({
-            peerId,
-            stream,
-            cameraOn: stream.getVideoTracks().some((track) => track.enabled),
-          })
+          console.log("Remote stream received from peer:", peerId);
+          const existingStreamIndex = this.remoteStreams.findIndex(s => s.peerId === peerId);
+          if (existingStreamIndex > -1) {
+            console.log("Updating existing stream for peer:", peerId);
+            this.remoteStreams[existingStreamIndex].stream = stream;
+            this.remoteStreams[existingStreamIndex].cameraOn = stream.getVideoTracks().some(track => track.enabled);
+          } else {
+            console.log("Adding new stream for peer:", peerId);
+            this.remoteStreams.push({ peerId, stream, cameraOn: stream.getVideoTracks().some(track => track.enabled) });
+          }
           this.cdr.markForCheck()
           setTimeout(() => {
             const vid = document.getElementById(`remoteVideo_${peerId}`) as HTMLVideoElement
             if (vid) {
+              console.log("Setting video element source for peer:", peerId);
               vid.srcObject = stream
+            } else {
+              console.log("Video element not found for peer:", peerId);
             }
           }, 0)
         },
+        (peerId: string) => {
+          console.log("Peer left:", peerId);
+          this.remoteStreams = this.remoteStreams.filter(s => s.peerId !== peerId);
+          this.cdr.markForCheck();
+        }
       )
+      console.log("Joiner initialization complete");
     }
+    console.log("=== End DM Call Debug ===");
   }
 
   selectStream(peerId: string) {

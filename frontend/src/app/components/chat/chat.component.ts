@@ -351,6 +351,10 @@ private loadChannelData(channel: string): void {
               vid.srcObject = stream;
             }
           }, 0);
+        },
+        (peerId: string) => {
+          this.remoteStreams = this.remoteStreams.filter(s => s.peerId !== peerId);
+          this.cdr.markForCheck();
         }
       );
     } else {
@@ -375,6 +379,10 @@ private loadChannelData(channel: string): void {
               vid.srcObject = stream;
             }
           }, 0);
+        },
+        (peerId: string) => {
+          this.remoteStreams = this.remoteStreams.filter(s => s.peerId !== peerId);
+          this.cdr.markForCheck();
         }
       );
     }

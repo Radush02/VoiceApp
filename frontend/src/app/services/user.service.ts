@@ -50,7 +50,6 @@ export class UserService {
   getFriends(): Observable<any> {
     return this.http.get(`${this.apiLink}/friends`, { withCredentials: true });
   }
-
   areFriends(user: string): Observable<any> {
     return this.http.get(`${this.apiLink}/friends/${user}`, { withCredentials: true });
   }

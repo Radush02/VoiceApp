@@ -79,7 +79,6 @@ export class FriendRequestPopupComponent {
       next: () => {
         this.isSendingRequest = false
         this.requestSent = true
-        // Close the dialog after a short delay to show success state
         setTimeout(() => {
           this.dialogRef.close('friend-request-sent');
         }, 1500);
