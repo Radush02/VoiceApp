@@ -53,6 +53,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   isLoading = true
 
   private presenceSubscription?: Subscription
+  private refreshSubscription?: Subscription
 
   constructor(
     private router: Router,
@@ -68,12 +69,16 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.loadUserInfo()
     this.getFriends()
     this.subscribeToPresence()
+    this.subscribeToRefreshEvents()
     this.dataRefreshService.triggerRefresh('sidebar');
   }
 
   ngOnDestroy() {
     if (this.presenceSubscription) {
       this.presenceSubscription.unsubscribe()
+    }
+    if (this.refreshSubscription) {
+      this.refreshSubscription.unsubscribe()
     }
   }
 
@@ -154,10 +159,20 @@ export class HomeComponent implements OnInit, OnDestroy {
     })
   }
 
+  subscribeToRefreshEvents() {
+    this.refreshSubscription = this.dataRefreshService.refresh$.subscribe((component: string) => {
+      if (component === 'friends') {
+        console.log('Refreshing friends list...');
+        this.friends = [];
+        this.isLoading = true;
+        this.getFriends();
+      }
+    });
+  }
+
   isOnline(username: string): boolean {
     return this.onlineUsers[username] === true
   }
-  // Modify sortAndFilterFriends to ignore case sensitivity in search
   sortAndFilterFriends() {
     console.log(this.friends, this.searchQuery);
     const query = this.searchQuery.toLowerCase();

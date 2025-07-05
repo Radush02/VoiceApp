@@ -143,6 +143,8 @@ editAboutMe() {
         this.pendingRequests = this.pendingRequests.filter((req) => req !== username);
         this.requestsCount = this.pendingRequests.length;
         if(response=== RequestResponse.ACCEPTED) {
+          this.dataRefreshService.triggerRefresh('friends');
+          this.dataRefreshService.triggerRefresh('sidebar');
           this.router.navigate(['/']);
       }},
       (error) => {
